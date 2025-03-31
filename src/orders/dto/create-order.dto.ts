@@ -1,53 +1,40 @@
-import { ApiProperty } from "@nestjs/swagger"
-import { IsNotEmpty, IsArray, IsUUID, IsNumber, Min, IsOptional, IsString, ValidateNested } from "class-validator"
+import { IsArray, IsString, IsOptional, IsUUID, ValidateNested, IsNumber, Min } from "class-validator"
 import { Type } from "class-transformer"
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger"
 
 class OrderItemDto {
-  @ApiProperty({ description: "Product ID" })
+  @ApiProperty({ example: "123e4567-e89b-12d3-a456-426614174000" })
   @IsUUID()
-  @IsNotEmpty()
   productId: string
 
-  @ApiProperty({ description: "Quantity of the product" })
+  @ApiProperty({ example: 2 })
   @IsNumber()
   @Min(1)
-  @IsNotEmpty()
   quantity: number
-
-  @ApiProperty({ description: "Selected product options (color, size, etc.)", required: false })
-  @IsOptional()
-  options?: Record<string, any>
 }
 
 export class CreateOrderDto {
-  @ApiProperty({ description: "Order items", type: [OrderItemDto] })
+  @ApiProperty({ type: [OrderItemDto] })
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => OrderItemDto)
-  @IsNotEmpty()
   items: OrderItemDto[]
 
-  @ApiProperty({ description: "Shipping address ID" })
+  @ApiProperty({ example: "123e4567-e89b-12d3-a456-426614174000" })
   @IsUUID()
-  @IsNotEmpty()
-  shippingAddressId: string
+  addressId: string
 
-  @ApiProperty({ description: "Billing address ID (if different from shipping)", required: false })
+  @ApiPropertyOptional({ example: "123e4567-e89b-12d3-a456-426614174000" })
   @IsUUID()
   @IsOptional()
-  billingAddressId?: string
+  paymentMethodId?: string
 
-  @ApiProperty({ description: "Payment method ID" })
+  @ApiPropertyOptional({ example: "123e4567-e89b-12d3-a456-426614174000" })
   @IsUUID()
-  @IsNotEmpty()
-  paymentMethodId: string
-
-  @ApiProperty({ description: "Coupon code", required: false })
-  @IsString()
   @IsOptional()
-  couponCode?: string
+  couponId?: string
 
-  @ApiProperty({ description: "Order notes from customer", required: false })
+  @ApiPropertyOptional({ example: "Please deliver to the back door" })
   @IsString()
   @IsOptional()
   notes?: string

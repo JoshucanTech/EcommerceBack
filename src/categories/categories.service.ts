@@ -1,155 +1,132 @@
-import { Injectable, NotFoundException, BadRequestException } from "@nestjs/common"
-import { InjectRepository } from "@nestjs/typeorm"
-import { type Repository, In, Not } from "typeorm"
-import { Category } from "./entities/category.entity"
+import { Injectable, NotFoundException } from "@nestjs/common"
+import type { PrismaService } from "../prisma/prisma.service"
 import type { CreateCategoryDto } from "./dto/create-category.dto"
 import type { UpdateCategoryDto } from "./dto/update-category.dto"
-import { slugify } from "../common/utils/slugify.util"
+import type { Category } from "@prisma/client"
+import type { StorageService } from "../common/services/storage.service"
+import type { Express } from "express"
 
 @Injectable()
 export class CategoriesService {
   constructor(
-    @InjectRepository(Category)
-    private categoriesRepository: Repository<Category>,
+    private prisma: PrismaService,
+    private storageService: StorageService,
   ) {}
 
   /**
    * Create a new category
    * @param createCategoryDto Category creation data
-   * @returns Created category
+   * @returns The created category
    */
   async create(createCategoryDto: CreateCategoryDto): Promise<Category> {
-    const { parentId, ...categoryData } = createCategoryDto
+    const { name, description, parentId, isActive, image } = createCategoryDto
 
-    // Generate slug if not provided
-    if (!categoryData.slug) {
-      categoryData.slug = slugify(categoryData.name)
-    }
+    // Generate slug from name if not provided
+    const slug = createCategoryDto.slug || this.generateSlug(name)
 
-    // Check if slug already exists
-    const existingCategory = await this.categoriesRepository.findOne({
-      where: { slug: categoryData.slug },
+    return this.prisma.category.create({
+      data: {
+        name,
+        slug,
+        description,
+        parentId,
+        isActive,
+        image,
+      },
     })
-
-    if (existingCategory) {
-      categoryData.slug = `${categoryData.slug}-${Date.now()}`
-    }
-
-    // Create category
-    const category = this.categoriesRepository.create(categoryData)
-
-    // Set parent category if provided
-    if (parentId) {
-      const parentCategory = await this.findOne(parentId)
-      category.parent = parentCategory
-    }
-
-    return this.categoriesRepository.save(category)
   }
 
   /**
-   * Find all categories with filtering and pagination
-   * @param options Filter and pagination options
-   * @returns Paginated categories
+   * Find all categories with optional filtering
+   * @param options Query options
+   * @returns Array of categories
    */
-  async findAll(options: {
-    page?: number
-    limit?: number
-    search?: string
-    featured?: boolean
+  async findAll(options?: {
     parentId?: string
-    sortBy?: string
-    sortOrder?: "ASC" | "DESC"
-  }) {
-    const { page = 1, limit = 10, search, featured, parentId, sortBy = "displayOrder", sortOrder = "ASC" } = options
+    isActive?: boolean
+    search?: string
+    skip?: number
+    take?: number
+  }): Promise<Category[]> {
+    const { parentId, isActive, search, skip, take } = options || {}
 
-    // Build query
-    const queryBuilder = this.categoriesRepository
-      .createQueryBuilder("category")
-      .leftJoinAndSelect("category.parent", "parent")
-      .leftJoinAndSelect("category.children", "children")
-
-    // Apply filters
-    if (search) {
-      queryBuilder.andWhere("(category.name ILIKE :search OR category.description ILIKE :search)", {
-        search: `%${search}%`,
-      })
-    }
-
-    if (featured !== undefined) {
-      queryBuilder.andWhere("category.featured = :featured", { featured })
-    }
-
-    if (parentId) {
-      queryBuilder.andWhere("parent.id = :parentId", { parentId })
-    } else {
-      queryBuilder.andWhere("category.parent IS NULL")
-    }
-
-    // Apply sorting
-    queryBuilder.orderBy(`category.${sortBy}`, sortOrder)
-
-    // Apply pagination
-    queryBuilder.skip((page - 1) * limit).take(limit)
-
-    // Execute query
-    const [categories, total] = await queryBuilder.getManyAndCount()
-
-    return {
-      data: categories,
-      meta: {
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit),
+    return this.prisma.category.findMany({
+      where: {
+        ...(parentId !== undefined ? { parentId } : {}),
+        ...(isActive !== undefined && { isActive }),
+        ...(search && {
+          OR: [
+            { name: { contains: search, mode: "insensitive" } },
+            { description: { contains: search, mode: "insensitive" } },
+          ],
+        }),
       },
-    }
+      include: {
+        parent: true,
+        children: true,
+        _count: {
+          select: {
+            products: true,
+          },
+        },
+      },
+      skip,
+      take,
+      orderBy: {
+        name: "asc",
+      },
+    })
   }
 
   /**
    * Find a category by ID
    * @param id Category ID
-   * @returns Category
+   * @returns The found category or null
    */
-  async findOne(id: string): Promise<Category> {
-    const category = await this.categoriesRepository.findOne({
+  async findById(id: string): Promise<Category | null> {
+    return this.prisma.category.findUnique({
       where: { id },
-      relations: ["parent", "children", "products"],
+      include: {
+        parent: true,
+        children: true,
+        products: {
+          take: 10,
+          orderBy: {
+            createdAt: "desc",
+          },
+        },
+        _count: {
+          select: {
+            products: true,
+          },
+        },
+      },
     })
-
-    if (!category) {
-      throw new NotFoundException(`Category with ID ${id} not found`)
-    }
-
-    return category
   }
 
   /**
    * Find a category by slug
    * @param slug Category slug
-   * @returns Category
+   * @returns The found category or null
    */
-  async findBySlug(slug: string): Promise<Category> {
-    const category = await this.categoriesRepository.findOne({
+  async findBySlug(slug: string): Promise<Category | null> {
+    return this.prisma.category.findUnique({
       where: { slug },
-      relations: ["parent", "children", "products"],
-    })
-
-    if (!category) {
-      throw new NotFoundException(`Category with slug ${slug} not found`)
-    }
-
-    return category
-  }
-
-  /**
-   * Find categories by IDs
-   * @param ids Category IDs
-   * @returns Categories
-   */
-  async findByIds(ids: string[]): Promise<Category[]> {
-    return this.categoriesRepository.find({
-      where: { id: In(ids) },
+      include: {
+        parent: true,
+        children: true,
+        products: {
+          take: 10,
+          orderBy: {
+            createdAt: "desc",
+          },
+        },
+        _count: {
+          select: {
+            products: true,
+          },
+        },
+      },
     })
   }
 
@@ -157,58 +134,104 @@ export class CategoriesService {
    * Update a category
    * @param id Category ID
    * @param updateCategoryDto Category update data
-   * @returns Updated category
+   * @returns The updated category
    */
   async update(id: string, updateCategoryDto: UpdateCategoryDto): Promise<Category> {
-    const category = await this.findOne(id)
-    const { parentId, ...categoryData } = updateCategoryDto
-
-    // Update slug if name is changed
-    if (categoryData.name && categoryData.name !== category.name) {
-      categoryData.slug = slugify(categoryData.name)
-
-      // Check if slug already exists
-      const existingCategory = await this.categoriesRepository.findOne({
-        where: { slug: categoryData.slug, id: Not(id) },
-      })
-
-      if (existingCategory) {
-        categoryData.slug = `${categoryData.slug}-${Date.now()}`
-      }
+    const category = await this.findById(id)
+    if (!category) {
+      throw new NotFoundException(`Category with ID ${id} not found`)
     }
 
-    // Update parent category if provided
-    if (parentId) {
-      // Check for circular reference
-      if (parentId === id) {
-        throw new BadRequestException("Category cannot be its own parent")
-      }
-
-      const parentCategory = await this.findOne(parentId)
-      category.parent = parentCategory
-    } else if (parentId === null) {
-      category.parent = null
-    }
-
-    // Update category
-    const updatedCategory = Object.assign(category, categoryData)
-    return this.categoriesRepository.save(updatedCategory)
+    return this.prisma.category.update({
+      where: { id },
+      data: updateCategoryDto,
+    })
   }
 
   /**
-   * Remove a category
+   * Delete a category
    * @param id Category ID
-   * @returns Deletion result
+   * @returns The deleted category
    */
-  async remove(id: string): Promise<void> {
-    const category = await this.findOne(id)
-
-    // Check if category has children
-    if (category.children && category.children.length > 0) {
-      throw new BadRequestException("Cannot delete category with children")
+  async remove(id: string): Promise<Category> {
+    const category = await this.findById(id)
+    if (!category) {
+      throw new NotFoundException(`Category with ID ${id} not found`)
     }
 
-    await this.categoriesRepository.softRemove(category)
+    return this.prisma.category.delete({
+      where: { id },
+    })
+  }
+
+  /**
+   * Count categories with optional filtering
+   * @param options Query options
+   * @returns Number of categories
+   */
+  async count(options?: {
+    parentId?: string
+    isActive?: boolean
+    search?: string
+  }): Promise<number> {
+    const { parentId, isActive, search } = options || {}
+
+    return this.prisma.category.count({
+      where: {
+        ...(parentId !== undefined ? { parentId } : {}),
+        ...(isActive !== undefined && { isActive }),
+        ...(search && {
+          OR: [
+            { name: { contains: search, mode: "insensitive" } },
+            { description: { contains: search, mode: "insensitive" } },
+          ],
+        }),
+      },
+    })
+  }
+
+  /**
+   * Upload category image
+   * @param id Category ID
+   * @param file Image file
+   * @returns The updated category
+   */
+  async uploadImage(id: string, file: Express.Multer.File): Promise<Category> {
+    const category = await this.findById(id)
+    if (!category) {
+      throw new NotFoundException(`Category with ID ${id} not found`)
+    }
+
+    // Delete old image if exists
+    if (category.image) {
+      await this.storageService.deleteFile(category.image)
+    }
+
+    // Upload new image
+    const imageUrl = await this.storageService.uploadFile(file.buffer, {
+      filename: `${Date.now()}-${file.originalname}`,
+      folder: "categories",
+      mimetype: file.mimetype,
+    })
+
+    return this.prisma.category.update({
+      where: { id },
+      data: {
+        image: imageUrl,
+      },
+    })
+  }
+
+  /**
+   * Generate a slug from a category name
+   * @param name Category name
+   * @returns Generated slug
+   */
+  private generateSlug(name: string): string {
+    return name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
   }
 }
 
