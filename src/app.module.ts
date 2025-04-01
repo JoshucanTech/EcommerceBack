@@ -10,21 +10,21 @@ import { PrismaModule } from "./prisma/prisma.module"
 import { AuthModule } from "./auth/auth.module"
 import { UsersModule } from "./users/users.module"
 import { ProductsModule } from "./products/products.module"
-import { CategoriesModule } from "./categories/categories.module"
-import { OrdersModule } from "./orders/orders.module"
-import { VendorsModule } from "./vendors/vendors.module"
-import { RidersModule } from "./riders/riders.module"
-import { PaymentsModule } from "./payments/payments.module"
-import { UploadsModule } from "./uploads/uploads.module"
-import { NotificationsModule } from "./notifications/notifications.module"
-import { MessagesModule } from "./messages/messages.module"
-import { ReviewsModule } from "./reviews/reviews.module"
-import { CouponsModule } from "./coupons/coupons.module"
-import { FlashSalesModule } from "./flash-sales/flash-sales.module"
-import { CartsModule } from "./carts/carts.module"
-import { WishlistsModule } from "./wishlists/wishlists.module"
-import { DeliveriesModule } from "./deliveries/deliveries.module"
-import { SettingsModule } from "./settings/settings.module"
+// import { CategoriesModule } from "./categories/categories.module"
+// import { OrdersModule } from "./orders/orders.module"
+// import { VendorsModule } from "./vendors/vendors.module"
+// import { RidersModule } from "./riders/riders.module"
+// import { PaymentsModule } from "./payments/payments.module"
+// import { UploadsModule } from "./uploads/uploads.module"
+// import { NotificationsModule } from "./notifications/notifications.module"
+// import { MessagesModule } from "./messages/messages.module"
+// import { ReviewsModule } from "./reviews/reviews.module"
+// import { CouponsModule } from "./coupons/coupons.module"
+// import { FlashSalesModule } from "./flash-sales/flash-sales.module"
+// import { CartsModule } from "./carts/carts.module"
+// import { WishlistsModule } from "./wishlists/wishlists.module"
+// import { DeliveriesModule } from "./deliveries/deliveries.module"
+// import { SettingsModule } from "./settings/settings.module"
 import { CommonModule } from "./common/common.module"
 
 @Module({
@@ -74,21 +74,21 @@ import { CommonModule } from "./common/common.module"
     AuthModule,
     UsersModule,
     ProductsModule,
-    CategoriesModule,
-    OrdersModule,
-    VendorsModule,
-    RidersModule,
-    PaymentsModule,
-    UploadsModule,
-    NotificationsModule,
-    MessagesModule,
-    ReviewsModule,
-    CouponsModule,
-    FlashSalesModule,
-    CartsModule,
-    WishlistsModule,
-    DeliveriesModule,
-    SettingsModule,
+    // CategoriesModule,
+    // OrdersModule,
+    // VendorsModule,
+    // RidersModule,
+    // PaymentsModule,
+    // UploadsModule,
+    // NotificationsModule,
+    // MessagesModule,
+    // ReviewsModule,
+    // CouponsModule,
+    // FlashSalesModule,
+    // CartsModule,
+    // WishlistsModule,
+    // DeliveriesModule,
+    // SettingsModule,
   ],
   controllers: [],
   providers: [],

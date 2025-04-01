@@ -24,8 +24,8 @@ export class AppController {
         return this.getVendorDashboardData(user.id);
       case Role.BUYER:
         return this.getBuyerDashboardData(user.id);
-      case Role.RIDER:
-        return this.getRiderDashboardData(user.id);
+      // case Role.RIDER:
+      //   return this.getRiderDashboardData(user.id);
       default:
         return { message: 'Invalid user role' };
     }
@@ -76,3 +76,5 @@ export class AppController {
    * @param riderId Rider ID
    * @returns Rider dashboard data
 
+**/
+}

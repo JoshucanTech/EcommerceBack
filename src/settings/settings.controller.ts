@@ -3,7 +3,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from "@nestjs/swagg
 
 import type { SettingsService } from "./settings.service"
 import type { CreateSettingsDto } from "./dto/create-settings.dto"
-import type { UpdateSettingsDto } from "./dto/update-settings.dto"
+// import type { UpdateSettingsDto } from "./dto/update-settings.dto"
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard"
 import { RolesGuard } from "../auth/guards/roles.guard"
 import { Roles } from "../auth/decorators/roles.decorator"
@@ -50,9 +50,9 @@ export class SettingsController {
   @ApiResponse({ status: 401, description: "Unauthorized" })
   @ApiResponse({ status: 403, description: "Forbidden" })
   @ApiResponse({ status: 404, description: "Setting not found" })
-  async update(@Param('key') key: string, @Body() updateSettingsDto: UpdateSettingsDto) {
-    return this.settingsService.update(key, updateSettingsDto)
-  }
+  // async update(@Param('key') key: string, @Body() updateSettingsDto: UpdateSettingsDto) {
+  //   return this.settingsService.update(key, updateSettingsDto)
+  // }
 
   @Delete(':key')
   @HttpCode(HttpStatus.NO_CONTENT)
