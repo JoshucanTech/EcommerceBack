@@ -1,117 +1,91 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-  UseGuards,
-  Query,
-  HttpCode,
-  HttpStatus,
-} from "@nestjs/common"
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from "@nestjs/swagger"
-
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query } from "@nestjs/common"
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiBearerAuth } from "@nestjs/swagger"
 import type { FlashSalesService } from "./flash-sales.service"
 import type { CreateFlashSaleDto } from "./dto/create-flash-sale.dto"
 import type { UpdateFlashSaleDto } from "./dto/update-flash-sale.dto"
-import type { AddFlashSaleItemDto } from "./dto/add-flash-sale-item.dto"
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard"
+import { RolesGuard } from "../auth/guards/roles.guard"
 import { Roles } from "../auth/decorators/roles.decorator"
-import { Role } from "@prisma/client"
+import { CurrentUser } from "../auth/decorators/current-user.decorator"
+import { Public } from "../auth/decorators/public.decorator"
 
 @ApiTags("flash-sales")
 @Controller("flash-sales")
-@UseGuards(JwtAuthGuard)
-@ApiBearerAuth()
 export class FlashSalesController {
   constructor(private readonly flashSalesService: FlashSalesService) {}
 
   @Post()
-  @Roles(Role.ADMIN)
-  @ApiOperation({ summary: 'Create a new flash sale (Admin only)' })
-  @ApiResponse({ status: 201, description: 'Flash sale created successfully' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Forbidden' })
-  async create(@Body() createFlashSaleDto: CreateFlashSaleDto) {
-    return this.flashSalesService.create(createFlashSaleDto);
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("VENDOR", "ADMIN")
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Create a new flash sale" })
+  @ApiResponse({ status: 201, description: "Flash sale created successfully" })
+  @ApiResponse({ status: 400, description: "Bad request" })
+  @ApiResponse({ status: 401, description: "Unauthorized" })
+  @ApiResponse({ status: 403, description: "Forbidden - Insufficient permissions" })
+  create(@Body() createFlashSaleDto: CreateFlashSaleDto, @CurrentUser() user) {
+    return this.flashSalesService.create(createFlashSaleDto, user.id)
   }
 
   @Get()
-  @ApiOperation({ summary: "Get all flash sales" })
-  @ApiQuery({ name: "isActive", type: Boolean, required: false })
-  @ApiQuery({ name: "skip", type: Number, required: false })
-  @ApiQuery({ name: "take", type: Number, required: false })
-  @ApiResponse({ status: 200, description: "List of flash sales" })
-  async findAll(@Query('isActive') isActive?: boolean, @Query('skip') skip?: number, @Query('take') take?: number) {
-    return {
-      data: await this.flashSalesService.findAll({
-        isActive,
-        skip: skip ? +skip : undefined,
-        take: take ? +take : undefined,
-      }),
-      meta: {
-        total: await this.flashSalesService.count({ isActive }),
-        skip: skip ? +skip : 0,
-        take: take ? +take : 10,
-      },
-    }
+  @Public()
+  @ApiOperation({ summary: "Get all active flash sales with pagination" })
+  @ApiQuery({ name: "page", required: false, type: Number, description: "Page number" })
+  @ApiQuery({ name: "limit", required: false, type: Number, description: "Items per page" })
+  @ApiQuery({ name: "includeExpired", required: false, type: Boolean, description: "Include expired flash sales" })
+  @ApiQuery({ name: "vendorId", required: false, type: String, description: "Filter by vendor ID" })
+  @ApiResponse({ status: 200, description: "Returns paginated flash sales" })
+  findAll(
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+    @Query('includeExpired') includeExpired?: boolean,
+    @Query('vendorId') vendorId?: string,
+  ) {
+    return this.flashSalesService.findAll({
+      page: page || 1,
+      limit: limit || 10,
+      includeExpired: includeExpired === true,
+      vendorId,
+    })
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Get flash sale by ID' })
-  @ApiResponse({ status: 200, description: 'Flash sale details' })
+  @Public()
+  @ApiOperation({ summary: 'Get a flash sale by ID or slug' })
+  @ApiParam({ name: 'id', description: 'Flash sale ID or slug' })
+  @ApiResponse({ status: 200, description: 'Returns the flash sale' })
   @ApiResponse({ status: 404, description: 'Flash sale not found' })
-  async findOne(@Param('id') id: string) {
+  findOne(@Param('id') id: string) {
     return this.flashSalesService.findOne(id);
   }
 
   @Patch(":id")
-  @Roles(Role.ADMIN)
-  @ApiOperation({ summary: "Update flash sale (Admin only)" })
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("VENDOR", "ADMIN")
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Update a flash sale" })
+  @ApiParam({ name: "id", description: "Flash sale ID" })
   @ApiResponse({ status: 200, description: "Flash sale updated successfully" })
-  @ApiResponse({ status: 401, description: "Unauthorized" })
-  @ApiResponse({ status: 403, description: "Forbidden" })
-  @ApiResponse({ status: 404, description: "Flash sale not found" })
-  async update(@Param('id') id: string, @Body() updateFlashSaleDto: UpdateFlashSaleDto) {
-    return this.flashSalesService.update(id, updateFlashSaleDto)
-  }
-
-  @Delete(':id')
-  @Roles(Role.ADMIN)
-  @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Delete flash sale (Admin only)' })
-  @ApiResponse({ status: 204, description: 'Flash sale deleted successfully' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Forbidden' })
-  @ApiResponse({ status: 404, description: 'Flash sale not found' })
-  async remove(@Param('id') id: string) {
-    await this.flashSalesService.remove(id);
-  }
-
-  @Post(":flashSaleId/items")
-  @Roles(Role.ADMIN)
-  @ApiOperation({ summary: "Add an item to a flash sale (Admin only)" })
-  @ApiResponse({ status: 200, description: "Item added to flash sale successfully" })
   @ApiResponse({ status: 400, description: "Bad request" })
   @ApiResponse({ status: 401, description: "Unauthorized" })
-  @ApiResponse({ status: 403, description: "Forbidden" })
-  @ApiResponse({ status: 404, description: "Flash sale or product not found" })
-  async addItem(@Param('flashSaleId') flashSaleId: string, @Body() addFlashSaleItemDto: AddFlashSaleItemDto) {
-    return this.flashSalesService.addItem(flashSaleId, addFlashSaleItemDto)
+  @ApiResponse({ status: 403, description: "Forbidden - Insufficient permissions" })
+  @ApiResponse({ status: 404, description: "Flash sale not found" })
+  update(@Param('id') id: string, @Body() updateFlashSaleDto: UpdateFlashSaleDto, @CurrentUser() user) {
+    return this.flashSalesService.update(id, updateFlashSaleDto, user)
   }
 
-  @Delete(":flashSaleId/items/:productId")
-  @Roles(Role.ADMIN)
-  @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: "Remove an item from a flash sale (Admin only)" })
-  @ApiResponse({ status: 204, description: "Item removed from flash sale successfully" })
+  @Delete(":id")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("VENDOR", "ADMIN")
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Delete a flash sale" })
+  @ApiParam({ name: "id", description: "Flash sale ID" })
+  @ApiResponse({ status: 200, description: "Flash sale deleted successfully" })
   @ApiResponse({ status: 401, description: "Unauthorized" })
-  @ApiResponse({ status: 403, description: "Forbidden" })
-  @ApiResponse({ status: 404, description: "Flash sale or product not found" })
-  async removeItem(@Param('flashSaleId') flashSaleId: string, @Param('productId') productId: string) {
-    await this.flashSalesService.removeItem(flashSaleId, productId)
+  @ApiResponse({ status: 403, description: "Forbidden - Insufficient permissions" })
+  @ApiResponse({ status: 404, description: "Flash sale not found" })
+  remove(@Param('id') id: string, @CurrentUser() user) {
+    return this.flashSalesService.remove(id, user)
   }
 }
 

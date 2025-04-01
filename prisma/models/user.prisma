@@ -1,0 +1,107 @@
+// User-related models
+model User {
+  id                String              @id @default(uuid())
+  email             String              @unique
+  password          String?
+  firstName         String?
+  lastName          String?
+  phone             String?
+  avatar            String?
+  role              UserRole            @default(BUYER)
+  isActive          Boolean             @default(true)
+  emailVerified     Boolean             @default(false)
+  googleId          String?             @unique
+  facebookId        String?             @unique
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  profile           Profile?
+  addresses         Address[]
+  orders            Order[]             @relation("UserOrders")
+  reviews           Review[]
+  wishlistItems     WishlistItem[]
+  messages          Message[]           @relation("UserMessages")
+  receivedMessages  Message[]           @relation("ReceivedMessages")
+  notifications     Notification[]
+  vendor            Vendor?
+  rider             Rider?
+  supportTickets    SupportTicket[]
+  paymentMethods    PaymentMethod[]
+  settings          UserSettings?
+  refreshTokens     RefreshToken[]
+  comments          Comment[]
+  cart              Cart?
+
+  @@map("users")
+}
+
+model Profile {
+  id          String    @id @default(uuid())
+  bio         String?
+  gender      Gender?
+  birthDate   DateTime?
+  userId      String    @unique
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("profiles")
+}
+
+model Address {
+  id          String    @id @default(uuid())
+  street      String
+  city        String
+  state       String
+  postalCode  String
+  country     String
+  isDefault   Boolean   @default(false)
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  orders      Order[]
+
+  @@map("addresses")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@map("refresh_tokens")
+}
+
+model UserSettings {
+  id                  String   @id @default(uuid())
+  userId              String   @unique
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  language            String   @default("en")
+  currency            String   @default("USD")
+  darkMode            Boolean  @default(false)
+  emailNotifications  Boolean  @default(true)
+  pushNotifications   Boolean  @default(true)
+  smsNotifications    Boolean  @default(false)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@map("user_settings")
+}
+
+enum UserRole {
+  ADMIN
+  SUB_ADMIN
+  VENDOR
+  BUYER
+  RIDER
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+

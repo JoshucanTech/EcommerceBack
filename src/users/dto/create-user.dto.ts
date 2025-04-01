@@ -1,64 +1,66 @@
-import { IsEmail, IsString, IsOptional, MinLength, IsBoolean, IsEnum } from "class-validator"
-import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger"
-import { Role } from "@prisma/client"
+import { ApiProperty } from "@nestjs/swagger"
+import { IsEmail, IsNotEmpty, IsString, MinLength, IsOptional, IsEnum } from "class-validator"
+import { UserRole } from "@prisma/client"
 
 export class CreateUserDto {
-  @ApiProperty({ example: "user@example.com" })
-  @IsEmail()
+  @ApiProperty({
+    example: "user@example.com",
+    description: "User email address",
+  })
+  @IsEmail({}, { message: "Please provide a valid email address" })
+  @IsNotEmpty({ message: "Email is required" })
   email: string
 
-  @ApiProperty({ example: "password123", minLength: 8 })
+  @ApiProperty({
+    example: "password123",
+    description: "User password",
+  })
   @IsString()
-  @MinLength(8)
+  @IsNotEmpty({ message: "Password is required" })
+  @MinLength(6, { message: "Password must be at least 6 characters long" })
   password: string
 
-  @ApiPropertyOptional({ example: "John" })
+  @ApiProperty({
+    example: "John",
+    description: "User first name",
+  })
   @IsString()
-  @IsOptional()
-  firstName?: string
+  @IsNotEmpty({ message: "First name is required" })
+  firstName: string
 
-  @ApiPropertyOptional({ example: "Doe" })
+  @ApiProperty({
+    example: "Doe",
+    description: "User last name",
+  })
   @IsString()
-  @IsOptional()
-  lastName?: string
+  @IsNotEmpty({ message: "Last name is required" })
+  lastName: string
 
-  @ApiPropertyOptional({ example: "+1234567890" })
+  @ApiProperty({
+    example: "+1234567890",
+    description: "User phone number",
+    required: false,
+  })
   @IsString()
   @IsOptional()
   phone?: string
 
-  @ApiPropertyOptional({ example: "https://example.com/avatar.jpg" })
+  @ApiProperty({
+    example: "https://example.com/avatar.jpg",
+    description: "User avatar URL",
+    required: false,
+  })
   @IsString()
   @IsOptional()
   avatar?: string
 
-  @ApiPropertyOptional({ enum: Role, default: Role.BUYER })
-  @IsEnum(Role)
+  @ApiProperty({
+    enum: UserRole,
+    description: "User role",
+    default: UserRole.BUYER,
+  })
+  @IsEnum(UserRole)
   @IsOptional()
-  role?: Role
-
-  @ApiPropertyOptional({ default: true })
-  @IsBoolean()
-  @IsOptional()
-  isActive?: boolean
-
-  @ApiPropertyOptional({ default: false })
-  @IsBoolean()
-  @IsOptional()
-  isVerified?: boolean
-
-  @ApiPropertyOptional()
-  @IsString()
-  @IsOptional()
-  verificationToken?: string
-
-  @ApiPropertyOptional()
-  @IsString()
-  @IsOptional()
-  resetToken?: string
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  resetTokenExpiry?: Date
+  role?: UserRole
 }
 

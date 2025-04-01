@@ -1,10 +1,13 @@
-// ... This file was left out
-// for brevity. Assume it is correct
-// and
-// does
-// not
-// need
-// any
-// modifications.
-// ...
+import { ApiProperty } from "@nestjs/swagger"
+import { IsNumber } from "class-validator"
+
+export class UpdateLocationDto {
+  @ApiProperty({ description: "Current latitude", example: 40.7128 })
+  @IsNumber()
+  latitude: number
+
+  @ApiProperty({ description: "Current longitude", example: -74.006 })
+  @IsNumber()
+  longitude: number
+}
 

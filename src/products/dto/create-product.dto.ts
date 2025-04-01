@@ -1,100 +1,54 @@
-import { IsString, IsNumber, IsOptional, IsBoolean, IsArray, Min, IsUUID, IsObject } from "class-validator"
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger"
+import { IsString, IsNumber, IsBoolean, IsArray, IsOptional, Min, IsUUID } from "class-validator"
 
 export class CreateProductDto {
-  @ApiProperty({ example: "Product Name" })
+  @ApiProperty({ description: "Product name", example: "Wireless Headphones" })
   @IsString()
   name: string
 
-  @ApiPropertyOptional({ example: "product-name" })
+  @ApiProperty({
+    description: "Product description",
+    example: "High-quality wireless headphones with noise cancellation",
+  })
   @IsString()
-  @IsOptional()
-  slug?: string
+  description: string
 
-  @ApiPropertyOptional({ example: "Product description" })
-  @IsString()
-  @IsOptional()
-  description?: string
-
-  @ApiProperty({ example: 99.99 })
+  @ApiProperty({ description: "Product price", example: 99.99 })
   @IsNumber()
   @Min(0)
   price: number
 
-  @ApiPropertyOptional({ example: 129.99 })
+  @ApiPropertyOptional({ description: "Discounted price", example: 79.99 })
+  @IsOptional()
   @IsNumber()
   @Min(0)
-  @IsOptional()
-  compareAtPrice?: number
+  discountPrice?: number
 
-  @ApiPropertyOptional({ example: 50 })
+  @ApiProperty({ description: "Initial product quantity", example: 100 })
   @IsNumber()
   @Min(0)
-  @IsOptional()
-  costPrice?: number
+  quantity: number
 
-  @ApiPropertyOptional({ example: "SKU123" })
+  @ApiProperty({ description: "Product SKU", example: "WH-NC100-BLK" })
   @IsString()
-  @IsOptional()
-  sku?: string
+  sku: string
 
-  @ApiPropertyOptional({ example: "123456789" })
-  @IsString()
-  @IsOptional()
-  barcode?: string
-
-  @ApiPropertyOptional({ example: 100 })
-  @IsNumber()
-  @Min(0)
-  @IsOptional()
-  inventory?: number
-
-  @ApiPropertyOptional({ example: 1.5 })
-  @IsNumber()
-  @Min(0)
-  @IsOptional()
-  weight?: number
-
-  @ApiPropertyOptional({ example: "10x5x2" })
-  @IsString()
-  @IsOptional()
-  dimensions?: string
-
-  @ApiPropertyOptional({ default: true })
-  @IsBoolean()
-  @IsOptional()
-  isActive?: boolean
-
-  @ApiPropertyOptional({ default: false })
-  @IsBoolean()
-  @IsOptional()
-  isFeatured?: boolean
-
-  @ApiPropertyOptional({ example: "123e4567-e89b-12d3-a456-426614174000" })
-  @IsUUID()
-  @IsOptional()
-  categoryId?: string
-
-  @ApiPropertyOptional({ example: "123e4567-e89b-12d3-a456-426614174000" })
-  @IsUUID()
-  @IsOptional()
-  vendorId?: string
-
-  @ApiPropertyOptional({ type: [String], example: ["https://example.com/image1.jpg"] })
+  @ApiProperty({
+    description: "Product images URLs",
+    type: [String],
+    example: ["https://example.com/image1.jpg", "https://example.com/image2.jpg"],
+  })
   @IsArray()
   @IsString({ each: true })
-  @IsOptional()
-  images?: string[]
+  images: string[]
 
-  @ApiPropertyOptional({ type: [String], example: ["tag1", "tag2"] })
-  @IsArray()
-  @IsString({ each: true })
+  @ApiPropertyOptional({ description: "Whether the product is published", default: false })
   @IsOptional()
-  tags?: string[]
+  @IsBoolean()
+  isPublished?: boolean
 
-  @ApiPropertyOptional({ example: { color: "red", size: "large" } })
-  @IsObject()
-  @IsOptional()
-  attributes?: Record<string, any>
+  @ApiProperty({ description: "Category ID", example: "123e4567-e89b-12d3-a456-426614174000" })
+  @IsUUID()
+  categoryId: string
 }
 

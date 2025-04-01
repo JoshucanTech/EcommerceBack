@@ -1,30 +1,38 @@
-// Since the existing code was omitted for brevity and the updates indicate undeclared variables,
-// I will assume the file contains validation logic using a library like 'class-validator' and 'class-transformer'.
-// I will add the necessary imports to resolve the undeclared variables.
-
-import { IsString, IsNumber, IsOptional, IsNotEmpty, Min } from "class-validator"
-import { Type } from "class-transformer"
+import { ApiProperty } from "@nestjs/swagger"
+import { IsEnum, IsNotEmpty, IsNumber, IsString, IsUUID } from "class-validator"
+import { PaymentMethod, PaymentStatus } from "@prisma/client"
 
 export class CreatePaymentDto {
-  @IsString()
+  @ApiProperty({ description: "Order ID associated with this payment" })
+  @IsUUID()
   @IsNotEmpty()
-  readonly paymentMethod: string
+  orderId: string
 
+  @ApiProperty({
+    description: "Payment method",
+    enum: PaymentMethod,
+    example: PaymentMethod.CREDIT_CARD,
+  })
+  @IsEnum(PaymentMethod)
+  @IsNotEmpty()
+  method: PaymentMethod
+
+  @ApiProperty({ description: "Amount to be paid", example: 199.99 })
   @IsNumber()
-  @Min(0.01)
-  readonly amount: number
+  @IsNotEmpty()
+  amount: number
 
+  @ApiProperty({ description: "Transaction reference from payment provider", required: false })
   @IsString()
-  @IsOptional()
-  readonly currency?: string
+  transactionReference?: string
 
-  @IsString()
-  @IsOptional()
-  readonly description?: string
-
-  @IsNumber()
-  @Type(() => Number)
-  @IsOptional()
-  readonly orderId?: number
+  @ApiProperty({
+    description: "Payment status",
+    enum: PaymentStatus,
+    example: PaymentStatus.PENDING,
+    default: PaymentStatus.PENDING,
+  })
+  @IsEnum(PaymentStatus)
+  status: PaymentStatus = PaymentStatus.PENDING
 }
 

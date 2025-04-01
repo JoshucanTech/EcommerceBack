@@ -1,221 +1,181 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  UseGuards,
-  Query,
-  Req,
-  UseInterceptors,
-  UploadedFile,
-  UploadedFiles,
-} from "@nestjs/common"
-import { FileInterceptor, FilesInterceptor } from "@nestjs/platform-express"
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery, ApiConsumes, ApiBody } from "@nestjs/swagger"
-
+import { Controller, Get, Post, Body, Patch, Param, UseGuards, Query } from "@nestjs/common"
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiBearerAuth } from "@nestjs/swagger"
 import type { VendorsService } from "./vendors.service"
-import type { CreateVendorDto } from "./dto/create-vendor.dto"
+import type { CreateVendorApplicationDto } from "./dto/create-vendor-application.dto"
 import type { UpdateVendorDto } from "./dto/update-vendor.dto"
+import type { UpdateVendorApplicationDto } from "./dto/update-vendor-application.dto"
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard"
 import { RolesGuard } from "../auth/guards/roles.guard"
 import { Roles } from "../auth/decorators/roles.decorator"
-import { Role } from "@prisma/client"
-import type { Express } from "express"
+import { CurrentUser } from "../auth/decorators/current-user.decorator"
+import { Public } from "../auth/decorators/public.decorator"
 
 @ApiTags("vendors")
 @Controller("vendors")
 export class VendorsController {
   constructor(private readonly vendorsService: VendorsService) {}
 
-  @Post()
+  @Post("apply")
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: "Create a new vendor profile" })
-  @ApiResponse({ status: 201, description: "Vendor profile created successfully" })
+  @ApiOperation({ summary: "Apply to become a vendor" })
+  @ApiResponse({ status: 201, description: "Application submitted successfully" })
   @ApiResponse({ status: 400, description: "Bad request" })
   @ApiResponse({ status: 401, description: "Unauthorized" })
-  async create(@Body() createVendorDto: CreateVendorDto, @Req() req) {
-    return this.vendorsService.create(req.user.id, createVendorDto)
+  @ApiResponse({ status: 409, description: "User already has an application or is a vendor" })
+  apply(@Body() createVendorApplicationDto: CreateVendorApplicationDto, @CurrentUser() user) {
+    return this.vendorsService.apply(createVendorApplicationDto, user.id)
+  }
+
+  @Get("applications")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("ADMIN")
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Get all vendor applications (admin only)" })
+  @ApiQuery({ name: "page", required: false, type: Number, description: "Page number" })
+  @ApiQuery({ name: "limit", required: false, type: Number, description: "Items per page" })
+  @ApiQuery({ name: "status", required: false, type: String, description: "Filter by status" })
+  @ApiResponse({ status: 200, description: "Returns paginated vendor applications" })
+  @ApiResponse({ status: 401, description: "Unauthorized" })
+  @ApiResponse({ status: 403, description: "Forbidden - Insufficient permissions" })
+  getApplications(@Query('page') page?: number, @Query('limit') limit?: number, @Query('status') status?: string) {
+    return this.vendorsService.getApplications({
+      page: page || 1,
+      limit: limit || 10,
+      status,
+    })
+  }
+
+  @Get('applications/my')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get current user\'s vendor application' })
+  @ApiResponse({ status: 200, description: 'Returns the user\'s vendor application' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Application not found' })
+  getMyApplication(@CurrentUser() user) {
+    return this.vendorsService.getApplicationByUserId(user.id);
+  }
+
+  @Get('applications/:id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get a vendor application by ID (admin only)' })
+  @ApiParam({ name: 'id', description: 'Application ID' })
+  @ApiResponse({ status: 200, description: 'Returns the vendor application' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Insufficient permissions' })
+  @ApiResponse({ status: 404, description: 'Application not found' })
+  getApplication(@Param('id') id: string) {
+    return this.vendorsService.getApplicationById(id);
+  }
+
+  @Patch("applications/:id")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("ADMIN")
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Update a vendor application (admin only)" })
+  @ApiParam({ name: "id", description: "Application ID" })
+  @ApiResponse({ status: 200, description: "Application updated successfully" })
+  @ApiResponse({ status: 400, description: "Bad request" })
+  @ApiResponse({ status: 401, description: "Unauthorized" })
+  @ApiResponse({ status: 403, description: "Forbidden - Insufficient permissions" })
+  @ApiResponse({ status: 404, description: "Application not found" })
+  updateApplication(@Param('id') id: string, @Body() updateVendorApplicationDto: UpdateVendorApplicationDto) {
+    return this.vendorsService.updateApplication(id, updateVendorApplicationDto)
+  }
+
+  @Post('applications/:id/approve')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Approve a vendor application (admin only)' })
+  @ApiParam({ name: 'id', description: 'Application ID' })
+  @ApiResponse({ status: 200, description: 'Application approved successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Insufficient permissions' })
+  @ApiResponse({ status: 404, description: 'Application not found' })
+  approveApplication(@Param('id') id: string) {
+    return this.vendorsService.approveApplication(id);
+  }
+
+  @Post("applications/:id/reject")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("ADMIN")
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Reject a vendor application (admin only)" })
+  @ApiParam({ name: "id", description: "Application ID" })
+  @ApiResponse({ status: 200, description: "Application rejected successfully" })
+  @ApiResponse({ status: 401, description: "Unauthorized" })
+  @ApiResponse({ status: 403, description: "Forbidden - Insufficient permissions" })
+  @ApiResponse({ status: 404, description: "Application not found" })
+  rejectApplication(@Param('id') id: string, @Body() body: { notes?: string }) {
+    return this.vendorsService.rejectApplication(id, body.notes)
   }
 
   @Get()
-  @ApiOperation({ summary: "Get all vendors" })
-  @ApiQuery({ name: "isVerified", type: Boolean, required: false })
-  @ApiQuery({ name: "search", required: false })
-  @ApiQuery({ name: "skip", type: Number, required: false })
-  @ApiQuery({ name: "take", type: Number, required: false })
-  @ApiResponse({ status: 200, description: "List of vendors" })
-  async findAll(
-    @Query('isVerified') isVerified?: boolean,
+  @Public()
+  @ApiOperation({ summary: "Get all vendors with pagination" })
+  @ApiQuery({ name: "page", required: false, type: Number, description: "Page number" })
+  @ApiQuery({ name: "limit", required: false, type: Number, description: "Items per page" })
+  @ApiQuery({ name: "search", required: false, type: String, description: "Search term" })
+  @ApiQuery({ name: "sortBy", required: false, type: String, description: "Sort field" })
+  @ApiQuery({ name: "sortOrder", required: false, type: String, description: "Sort order (asc/desc)" })
+  @ApiResponse({ status: 200, description: "Returns paginated vendors" })
+  findAll(
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
     @Query('search') search?: string,
-    @Query('skip') skip?: number,
-    @Query('take') take?: number,
+    @Query('sortBy') sortBy?: string,
+    @Query('sortOrder') sortOrder?: 'asc' | 'desc',
   ) {
-    const vendors = await this.vendorsService.findAll({
-      isVerified,
+    return this.vendorsService.findAll({
+      page: page || 1,
+      limit: limit || 10,
       search,
-      skip: skip ? +skip : undefined,
-      take: take ? +take : undefined,
+      sortBy,
+      sortOrder,
     })
-
-    const count = await this.vendorsService.count({
-      isVerified,
-      search,
-    })
-
-    return {
-      data: vendors,
-      meta: {
-        total: count,
-        skip: skip ? +skip : 0,
-        take: take ? +take : vendors.length,
-      },
-    }
-  }
-
-  @Get('me')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.VENDOR)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get current vendor profile' })
-  @ApiResponse({ status: 200, description: 'Vendor profile' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Forbidden' })
-  async findMe(@Req() req) {
-    return this.vendorsService.findByUserId(req.user.id);
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Get vendor by ID' })
-  @ApiResponse({ status: 200, description: 'Vendor details' })
+  @Public()
+  @ApiOperation({ summary: 'Get a vendor by ID or slug' })
+  @ApiParam({ name: 'id', description: 'Vendor ID or slug' })
+  @ApiResponse({ status: 200, description: 'Returns the vendor' })
   @ApiResponse({ status: 404, description: 'Vendor not found' })
-  async findOne(@Param('id') id: string) {
-    return this.vendorsService.findById(id);
+  findOne(@Param('id') id: string) {
+    return this.vendorsService.findOne(id);
   }
 
-  @Patch(":id")
-  @UseGuards(JwtAuthGuard)
+  @Patch("profile")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("VENDOR")
   @ApiBearerAuth()
   @ApiOperation({ summary: "Update vendor profile" })
   @ApiResponse({ status: 200, description: "Vendor profile updated successfully" })
+  @ApiResponse({ status: 400, description: "Bad request" })
   @ApiResponse({ status: 401, description: "Unauthorized" })
+  @ApiResponse({ status: 403, description: "Forbidden - Insufficient permissions" })
   @ApiResponse({ status: 404, description: "Vendor not found" })
-  async update(@Param('id') id: string, @Body() updateVendorDto: UpdateVendorDto, @Req() req) {
-    // Check if user has permission to update this vendor
-    const vendor = await this.vendorsService.findById(id)
-    if (req.user.role !== Role.ADMIN && vendor.userId !== req.user.id) {
-      throw new Error("You do not have permission to update this vendor")
-    }
-
-    return this.vendorsService.update(id, updateVendorDto)
+  updateProfile(@CurrentUser() user, @Body() updateVendorDto: UpdateVendorDto) {
+    return this.vendorsService.updateProfile(user.id, updateVendorDto)
   }
 
-  @Patch(":id/verify")
+  @Patch(":id")
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.ADMIN)
+  @Roles("ADMIN")
   @ApiBearerAuth()
-  @ApiOperation({ summary: "Verify vendor (Admin only)" })
-  @ApiResponse({ status: 200, description: "Vendor verified successfully" })
+  @ApiOperation({ summary: "Update a vendor (admin only)" })
+  @ApiParam({ name: "id", description: "Vendor ID" })
+  @ApiResponse({ status: 200, description: "Vendor updated successfully" })
+  @ApiResponse({ status: 400, description: "Bad request" })
   @ApiResponse({ status: 401, description: "Unauthorized" })
-  @ApiResponse({ status: 403, description: "Forbidden" })
+  @ApiResponse({ status: 403, description: "Forbidden - Insufficient permissions" })
   @ApiResponse({ status: 404, description: "Vendor not found" })
-  async verify(@Param('id') id: string, @Body('isVerified') isVerified: boolean) {
-    return this.vendorsService.verify(id, isVerified)
-  }
-
-  @Post(":id/logo")
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @UseInterceptors(FileInterceptor("logo"))
-  @ApiConsumes("multipart/form-data")
-  @ApiBody({
-    schema: {
-      type: "object",
-      properties: {
-        logo: {
-          type: "string",
-          format: "binary",
-        },
-      },
-    },
-  })
-  @ApiOperation({ summary: "Upload vendor logo" })
-  @ApiResponse({ status: 200, description: "Logo uploaded successfully" })
-  @ApiResponse({ status: 401, description: "Unauthorized" })
-  @ApiResponse({ status: 404, description: "Vendor not found" })
-  async uploadLogo(@Param('id') id: string, @UploadedFile() file: Express.Multer.File, @Req() req) {
-    // Check if user has permission to update this vendor
-    const vendor = await this.vendorsService.findById(id)
-    if (req.user.role !== Role.ADMIN && vendor.userId !== req.user.id) {
-      throw new Error("You do not have permission to update this vendor")
-    }
-
-    return this.vendorsService.uploadLogo(id, file)
-  }
-
-  @Post(":id/banner")
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @UseInterceptors(FileInterceptor("banner"))
-  @ApiConsumes("multipart/form-data")
-  @ApiBody({
-    schema: {
-      type: "object",
-      properties: {
-        banner: {
-          type: "string",
-          format: "binary",
-        },
-      },
-    },
-  })
-  @ApiOperation({ summary: "Upload vendor banner" })
-  @ApiResponse({ status: 200, description: "Banner uploaded successfully" })
-  @ApiResponse({ status: 401, description: "Unauthorized" })
-  @ApiResponse({ status: 404, description: "Vendor not found" })
-  async uploadBanner(@Param('id') id: string, @UploadedFile() file: Express.Multer.File, @Req() req) {
-    // Check if user has permission to update this vendor
-    const vendor = await this.vendorsService.findById(id)
-    if (req.user.role !== Role.ADMIN && vendor.userId !== req.user.id) {
-      throw new Error("You do not have permission to update this vendor")
-    }
-
-    return this.vendorsService.uploadBanner(id, file)
-  }
-
-  @Post(":id/documents")
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @UseInterceptors(FilesInterceptor("documents", 5))
-  @ApiConsumes("multipart/form-data")
-  @ApiBody({
-    schema: {
-      type: "object",
-      properties: {
-        documents: {
-          type: "array",
-          items: {
-            type: "string",
-            format: "binary",
-          },
-        },
-      },
-    },
-  })
-  @ApiOperation({ summary: "Upload vendor verification documents" })
-  @ApiResponse({ status: 200, description: "Documents uploaded successfully" })
-  @ApiResponse({ status: 401, description: "Unauthorized" })
-  @ApiResponse({ status: 404, description: "Vendor not found" })
-  async uploadDocuments(@Param('id') id: string, @UploadedFiles() files: Express.Multer.File[], @Req() req) {
-    // Check if user has permission to update this vendor
-    const vendor = await this.vendorsService.findById(id)
-    if (req.user.role !== Role.ADMIN && vendor.userId !== req.user.id) {
-      throw new Error("You do not have permission to update this vendor")
-    }
-
-    return this.vendorsService.uploadVerificationDocuments(id, files)
+  update(@Param('id') id: string, @Body() updateVendorDto: UpdateVendorDto) {
+    return this.vendorsService.update(id, updateVendorDto)
   }
 }
 

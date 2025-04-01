@@ -1,32 +1,15 @@
 import { NestFactory } from "@nestjs/core"
-import { ValidationPipe } from "@nestjs/common"
-import { SwaggerModule, DocumentBuilder } from "@nestjs/swagger"
-import { ConfigService } from "@nestjs/config"
-import * as helmet from "helmet"
 import { AppModule } from "./app.module"
-import { PrismaService } from "./prisma/prisma.service"
+import { ValidationPipe } from "@nestjs/common"
+import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger"
+import { ConfigService } from "@nestjs/config"
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule)
   const configService = app.get(ConfigService)
 
-  // Enable shutdown hooks for Prisma
-  const prismaService = app.get(PrismaService)
-  await prismaService.enableShutdownHooks(app)
-
-  // Global prefix
-  const apiPrefix = configService.get<string>("API_PREFIX") || "api"
-  app.setGlobalPrefix(apiPrefix)
-
-  // Security middleware
-  app.use(helmet())
-
-  // CORS configuration
-  app.enableCors({
-    origin: configService.get<string>("FRONTEND_URL"),
-    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
-    credentials: true,
-  })
+  // Enable CORS
+  app.enableCors()
 
   // Global validation pipe
   app.useGlobalPipes(
@@ -34,28 +17,43 @@ async function bootstrap() {
       whitelist: true,
       transform: true,
       forbidNonWhitelisted: true,
-      transformOptions: {
-        enableImplicitConversion: true,
-      },
     }),
   )
 
-  // Swagger documentation
-  if (configService.get<string>("NODE_ENV") !== "production") {
-    const config = new DocumentBuilder()
-      .setTitle("E-commerce API")
-      .setDescription("Multi-vendor e-commerce platform API")
-      .setVersion("1.0")
-      .addBearerAuth()
-      .build()
-    const document = SwaggerModule.createDocument(app, config)
-    SwaggerModule.setup(`${apiPrefix}/docs`, app, document)
-  }
+  // Set global prefix
+  app.setGlobalPrefix("api")
+
+  // Swagger documentation setup
+  const config = new DocumentBuilder()
+    .setTitle("Multi-Vendor E-commerce API")
+    .setDescription("API documentation for the Multi-Vendor E-commerce platform")
+    .setVersion("1.0")
+    .addBearerAuth()
+    .addTag("auth", "Authentication endpoints")
+    .addTag("users", "User management endpoints")
+    .addTag("products", "Product management endpoints")
+    .addTag("categories", "Category management endpoints")
+    .addTag("vendors", "Vendor management endpoints")
+    .addTag("riders", "Rider management endpoints")
+    .addTag("orders", "Order management endpoints")
+    .addTag("deliveries", "Delivery management endpoints")
+    .addTag("payments", "Payment management endpoints")
+    .addTag("notifications", "Notification management endpoints")
+    .addTag("cart", "Shopping cart endpoints")
+    .addTag("wishlist", "Wishlist endpoints")
+    .addTag("reviews", "Product reviews endpoints")
+    .addTag("comments", "Product comments endpoints")
+    .addTag("flash-sales", "Flash sales endpoints")
+    .build()
+
+  const document = SwaggerModule.createDocument(app, config)
+  SwaggerModule.setup("api/docs", app, document)
 
   // Start the server
-  const port = configService.get<number>("PORT") || 3001
+  const port = configService.get<number>("PORT") || 3000
   await app.listen(port)
-  console.log(`Application is running on: http://localhost:${port}/${apiPrefix}`)
+  console.log(`Application is running on: http://localhost:${port}`)
+  console.log(`Swagger documentation available at: http://localhost:${port}/api/docs`)
 }
 bootstrap()
 
