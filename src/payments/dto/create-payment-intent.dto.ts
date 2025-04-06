@@ -1,5 +1,5 @@
-import { ApiProperty } from "@nestjs/swagger"
-import { IsNotEmpty, IsNumber, IsString, Min } from "class-validator"
+import { ApiProperty } from "@nestjs/swagger";
+import { IsNotEmpty, IsNumber, IsString, Min } from "class-validator";
 
 export class CreatePaymentIntentDto {
   @ApiProperty({
@@ -9,7 +9,7 @@ export class CreatePaymentIntentDto {
   @IsNumber()
   @Min(0.5)
   @IsNotEmpty()
-  amount: number
+  amount: number;
 
   @ApiProperty({
     example: "USD",
@@ -17,7 +17,7 @@ export class CreatePaymentIntentDto {
   })
   @IsString()
   @IsNotEmpty()
-  currency: string
+  currency: string;
 
   @ApiProperty({
     example: "123e4567-e89b-12d3-a456-426614174000",
@@ -25,6 +25,5 @@ export class CreatePaymentIntentDto {
   })
   @IsString()
   @IsNotEmpty()
-  orderId: string
+  orderId: string;
 }
-

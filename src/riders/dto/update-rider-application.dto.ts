@@ -1,6 +1,6 @@
-import { ApiPropertyOptional } from "@nestjs/swagger"
-import { IsString, IsEnum, IsOptional } from "class-validator"
-import { VehicleType, ApplicationStatus } from "@prisma/client"
+import { ApiPropertyOptional } from "@nestjs/swagger";
+import { IsString, IsEnum, IsOptional } from "class-validator";
+import { VehicleType, ApplicationStatus } from "@prisma/client";
 
 export class UpdateRiderApplicationDto {
   @ApiPropertyOptional({
@@ -10,22 +10,31 @@ export class UpdateRiderApplicationDto {
   })
   @IsOptional()
   @IsEnum(VehicleType)
-  vehicleType?: VehicleType
+  vehicleType?: VehicleType;
 
-  @ApiPropertyOptional({ description: "Vehicle plate number", example: "ABC123" })
+  @ApiPropertyOptional({
+    description: "Vehicle plate number",
+    example: "ABC123",
+  })
   @IsOptional()
   @IsString()
-  vehiclePlate?: string
+  vehiclePlate?: string;
 
-  @ApiPropertyOptional({ description: "Driver license number", example: "DL12345678" })
+  @ApiPropertyOptional({
+    description: "Driver license number",
+    example: "DL12345678",
+  })
   @IsOptional()
   @IsString()
-  licenseNumber?: string
+  licenseNumber?: string;
 
-  @ApiPropertyOptional({ description: "Identity document URL", example: "https://example.com/id-document.pdf" })
+  @ApiPropertyOptional({
+    description: "Identity document URL",
+    example: "https://example.com/id-document.pdf",
+  })
   @IsOptional()
   @IsString()
-  identityDocument?: string
+  identityDocument?: string;
 
   @ApiPropertyOptional({
     description: "Application status",
@@ -34,11 +43,13 @@ export class UpdateRiderApplicationDto {
   })
   @IsOptional()
   @IsEnum(ApplicationStatus)
-  status?: ApplicationStatus
+  status?: ApplicationStatus;
 
-  @ApiPropertyOptional({ description: "Admin notes", example: "All documents verified. Driver looks legitimate." })
+  @ApiPropertyOptional({
+    description: "Admin notes",
+    example: "All documents verified. Driver looks legitimate.",
+  })
   @IsOptional()
   @IsString()
-  notes?: string
+  notes?: string;
 }
-

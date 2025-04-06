@@ -1,37 +1,45 @@
-import { Injectable, NotFoundException, ForbiddenException } from "@nestjs/common"
-import type { PrismaService } from "../prisma/prisma.service"
-import type { CreateCommentDto } from "./dto/create-comment.dto"
-import type { UpdateCommentDto } from "./dto/update-comment.dto"
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from "@nestjs/common";
+import type { PrismaService } from "../prisma/prisma.service";
+import type { CreateCommentDto } from "./dto/create-comment.dto";
+import type { UpdateCommentDto } from "./dto/update-comment.dto";
 
 @Injectable()
 export class CommentsService {
   constructor(private prisma: PrismaService) {}
 
   async create(createCommentDto: CreateCommentDto, userId: string) {
-    const { content, productId, parentId } = createCommentDto
+    const { content, productId, parentId } = createCommentDto;
 
     // Check if product exists
     const product = await this.prisma.product.findUnique({
       where: { id: productId },
-    })
+    });
 
     if (!product) {
-      throw new NotFoundException(`Product with ID ${productId} not found`)
+      throw new NotFoundException(`Product with ID ${productId} not found`);
     }
 
     // Check if parent comment exists if parentId is provided
     if (parentId) {
       const parentComment = await this.prisma.comment.findUnique({
         where: { id: parentId },
-      })
+      });
 
       if (!parentComment) {
-        throw new NotFoundException(`Parent comment with ID ${parentId} not found`)
+        throw new NotFoundException(
+          `Parent comment with ID ${parentId} not found`,
+        );
       }
 
       // Ensure parent comment belongs to the same product
       if (parentComment.productId !== productId) {
-        throw new ForbiddenException("Parent comment does not belong to the specified product")
+        throw new ForbiddenException(
+          "Parent comment does not belong to the specified product",
+        );
       }
     }
 
@@ -53,20 +61,23 @@ export class CommentsService {
           },
         },
       },
-    })
+    });
   }
 
-  async findByProduct(productId: string, params: { page: number; limit: number }) {
-    const { page, limit } = params
-    const skip = (page - 1) * limit
+  async findByProduct(
+    productId: string,
+    params: { page: number; limit: number },
+  ) {
+    const { page, limit } = params;
+    const skip = (page - 1) * limit;
 
     // Check if product exists
     const product = await this.prisma.product.findUnique({
       where: { id: productId },
-    })
+    });
 
     if (!product) {
-      throw new NotFoundException(`Product with ID ${productId} not found`)
+      throw new NotFoundException(`Product with ID ${productId} not found`);
     }
 
     // Get top-level comments with pagination (no parentId)
@@ -101,7 +112,7 @@ export class CommentsService {
           parentId: null,
         },
       }),
-    ])
+    ]);
 
     return {
       data: comments.map((comment) => ({
@@ -115,20 +126,23 @@ export class CommentsService {
         limit,
         totalPages: Math.ceil(total / limit),
       },
-    }
+    };
   }
 
-  async findReplies(commentId: string, params: { page: number; limit: number }) {
-    const { page, limit } = params
-    const skip = (page - 1) * limit
+  async findReplies(
+    commentId: string,
+    params: { page: number; limit: number },
+  ) {
+    const { page, limit } = params;
+    const skip = (page - 1) * limit;
 
     // Check if comment exists
     const comment = await this.prisma.comment.findUnique({
       where: { id: commentId },
-    })
+    });
 
     if (!comment) {
-      throw new NotFoundException(`Comment with ID ${commentId} not found`)
+      throw new NotFoundException(`Comment with ID ${commentId} not found`);
     }
 
     // Get replies with pagination
@@ -156,7 +170,7 @@ export class CommentsService {
           parentId: commentId,
         },
       }),
-    ])
+    ]);
 
     return {
       data: replies,
@@ -166,22 +180,24 @@ export class CommentsService {
         limit,
         totalPages: Math.ceil(total / limit),
       },
-    }
+    };
   }
 
   async update(id: string, updateCommentDto: UpdateCommentDto, user: any) {
     // Check if comment exists
     const comment = await this.prisma.comment.findUnique({
       where: { id },
-    })
+    });
 
     if (!comment) {
-      throw new NotFoundException(`Comment with ID ${id} not found`)
+      throw new NotFoundException(`Comment with ID ${id} not found`);
     }
 
     // Check if user is the owner of the comment
     if (comment.userId !== user.id && user.role !== "ADMIN") {
-      throw new ForbiddenException("You do not have permission to update this comment")
+      throw new ForbiddenException(
+        "You do not have permission to update this comment",
+      );
     }
 
     // Update comment
@@ -198,30 +214,31 @@ export class CommentsService {
           },
         },
       },
-    })
+    });
   }
 
   async remove(id: string, user: any) {
     // Check if comment exists
     const comment = await this.prisma.comment.findUnique({
       where: { id },
-    })
+    });
 
     if (!comment) {
-      throw new NotFoundException(`Comment with ID ${id} not found`)
+      throw new NotFoundException(`Comment with ID ${id} not found`);
     }
 
     // Check if user is the owner of the comment or an admin
     if (comment.userId !== user.id && user.role !== "ADMIN") {
-      throw new ForbiddenException("You do not have permission to delete this comment")
+      throw new ForbiddenException(
+        "You do not have permission to delete this comment",
+      );
     }
 
     // Delete comment
     await this.prisma.comment.delete({
       where: { id },
-    })
+    });
 
-    return { message: "Comment deleted successfully" }
+    return { message: "Comment deleted successfully" };
   }
 }
-

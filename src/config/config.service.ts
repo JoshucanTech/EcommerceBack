@@ -1,72 +1,71 @@
-import { Injectable } from "@nestjs/common"
-import type { ConfigService as NestConfigService } from "@nestjs/config"
+import { Injectable } from "@nestjs/common";
+import type { ConfigService as NestConfigService } from "@nestjs/config";
 
 @Injectable()
 export class ConfigService {
   constructor(private configService: NestConfigService) {}
 
   get(key: string): string {
-    return this.configService.get<string>(key)
+    return this.configService.get<string>(key);
   }
 
   getNumber(key: string): number {
-    return Number(this.configService.get<string>(key))
+    return Number(this.configService.get<string>(key));
   }
 
   getBoolean(key: string): boolean {
-    return this.configService.get<string>(key) === "true"
+    return this.configService.get<string>(key) === "true";
   }
 
   get jwtSecret(): string {
-    return this.get("JWT_SECRET")
+    return this.get("JWT_SECRET");
   }
 
   get jwtExpiresIn(): string {
-    return this.get("JWT_EXPIRES_IN") || "1d"
+    return this.get("JWT_EXPIRES_IN") || "1d";
   }
 
   get jwtRefreshSecret(): string {
-    return this.get("JWT_REFRESH_SECRET")
+    return this.get("JWT_REFRESH_SECRET");
   }
 
   get jwtRefreshExpiresIn(): string {
-    return this.get("JWT_REFRESH_EXPIRES_IN") || "7d"
+    return this.get("JWT_REFRESH_EXPIRES_IN") || "7d";
   }
 
   get databaseUrl(): string {
-    return this.get("DATABASE_URL")
+    return this.get("DATABASE_URL");
   }
 
   get nodeEnv(): string {
-    return this.get("NODE_ENV") || "development"
+    return this.get("NODE_ENV") || "development";
   }
 
   get port(): number {
-    return this.getNumber("PORT") || 3000
+    return this.getNumber("PORT") || 3000;
   }
 
   get frontendUrl(): string {
-    return this.get("FRONTEND_URL") || "http://localhost:3000"
+    return this.get("FRONTEND_URL") || "http://localhost:3000";
   }
 
   get mailHost(): string {
-    return this.get("MAIL_HOST")
+    return this.get("MAIL_HOST");
   }
 
   get mailPort(): number {
-    return this.getNumber("MAIL_PORT")
+    return this.getNumber("MAIL_PORT");
   }
 
   get mailUser(): string {
-    return this.get("MAIL_USER")
+    return this.get("MAIL_USER");
   }
 
   get mailPassword(): string {
-    return this.get("MAIL_PASSWORD")
+    return this.get("MAIL_PASSWORD");
   }
 
   get mailFrom(): string {
-    return this.get("MAIL_FROM")
+    return this.get("MAIL_FROM");
   }
 }
-

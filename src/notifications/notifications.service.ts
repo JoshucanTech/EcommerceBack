@@ -1,7 +1,11 @@
-import { Injectable, NotFoundException, ForbiddenException } from "@nestjs/common"
-import type { CreateNotificationDto } from "./dto/create-notification.dto"
-import type { UpdateNotificationDto } from "./dto/update-notification.dto"
-import type { PrismaService } from "../prisma/prisma.service"
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from "@nestjs/common";
+import type { CreateNotificationDto } from "./dto/create-notification.dto";
+import type { UpdateNotificationDto } from "./dto/update-notification.dto";
+import type { PrismaService } from "../prisma/prisma.service";
 
 @Injectable()
 export class NotificationsService {
@@ -11,20 +15,22 @@ export class NotificationsService {
     // Verify the user exists
     const user = await this.prisma.user.findUnique({
       where: { id: createNotificationDto.userId },
-    })
+    });
 
     if (!user) {
-      throw new NotFoundException(`User with ID ${createNotificationDto.userId} not found`)
+      throw new NotFoundException(
+        `User with ID ${createNotificationDto.userId} not found`,
+      );
     }
 
     // Create the notification
     return this.prisma.notification.create({
       data: createNotificationDto,
-    })
+    });
   }
 
   async findAll(page: number, limit: number) {
-    const skip = (page - 1) * limit
+    const skip = (page - 1) * limit;
 
     const [notifications, total] = await Promise.all([
       this.prisma.notification.findMany({
@@ -35,14 +41,13 @@ export class NotificationsService {
             select: {
               id: true,
               email: true,
-              name: true,
             },
           },
         },
         orderBy: { createdAt: "desc" },
       }),
       this.prisma.notification.count(),
-    ])
+    ]);
 
     return {
       data: notifications,
@@ -52,16 +57,21 @@ export class NotificationsService {
         limit,
         totalPages: Math.ceil(total / limit),
       },
-    }
+    };
   }
 
-  async findUserNotifications(userId: string, page: number, limit: number, unreadOnly: boolean) {
-    const skip = (page - 1) * limit
+  async findUserNotifications(
+    userId: string,
+    page: number,
+    limit: number,
+    unreadOnly: boolean,
+  ) {
+    const skip = (page - 1) * limit;
 
     const whereClause = {
       userId,
       ...(unreadOnly ? { isRead: false } : {}),
-    }
+    };
 
     const [notifications, total] = await Promise.all([
       this.prisma.notification.findMany({
@@ -71,7 +81,7 @@ export class NotificationsService {
         orderBy: { createdAt: "desc" },
       }),
       this.prisma.notification.count({ where: whereClause }),
-    ])
+    ]);
 
     return {
       data: notifications,
@@ -81,7 +91,7 @@ export class NotificationsService {
         limit,
         totalPages: Math.ceil(total / limit),
       },
-    }
+    };
   }
 
   async getUnreadCount(userId: string) {
@@ -90,47 +100,53 @@ export class NotificationsService {
         userId,
         isRead: false,
       },
-    })
+    });
 
-    return { count }
+    return { count };
   }
 
   async findOne(id: string, userId: string) {
     const notification = await this.prisma.notification.findUnique({
       where: { id },
-    })
+    });
 
     if (!notification) {
-      throw new NotFoundException(`Notification with ID ${id} not found`)
+      throw new NotFoundException(`Notification with ID ${id} not found`);
     }
 
     // Check if the notification belongs to the user
     if (notification.userId !== userId) {
-      throw new ForbiddenException("You can only view your own notifications")
+      throw new ForbiddenException("You can only view your own notifications");
     }
 
-    return notification
+    return notification;
   }
 
-  async update(id: string, updateNotificationDto: UpdateNotificationDto, userId: string) {
+  async update(
+    id: string,
+    updateNotificationDto: UpdateNotificationDto,
+    userId: string,
+  ) {
     // Check if notification exists and belongs to the user
     const notification = await this.prisma.notification.findUnique({
       where: { id },
-    })
+    });
 
     if (!notification) {
-      throw new NotFoundException(`Notification with ID ${id} not found`)
+      throw new NotFoundException(`Notification with ID ${id} not found`);
     }
 
     if (notification.userId !== userId) {
-      throw new ForbiddenException("You can only update your own notifications")
+      throw new ForbiddenException(
+        "You can only update your own notifications",
+      );
     }
 
     // Update notification
     return this.prisma.notification.update({
       where: { id },
       data: updateNotificationDto,
-    })
+    });
   }
 
   async markAllRead(userId: string) {
@@ -142,28 +158,29 @@ export class NotificationsService {
       data: {
         isRead: true,
       },
-    })
+    });
 
-    return { success: true, message: "All notifications marked as read" }
+    return { success: true, message: "All notifications marked as read" };
   }
 
   async remove(id: string, userId: string) {
     // Check if notification exists and belongs to the user
     const notification = await this.prisma.notification.findUnique({
       where: { id },
-    })
+    });
 
     if (!notification) {
-      throw new NotFoundException(`Notification with ID ${id} not found`)
+      throw new NotFoundException(`Notification with ID ${id} not found`);
     }
 
     if (notification.userId !== userId) {
-      throw new ForbiddenException("You can only delete your own notifications")
+      throw new ForbiddenException(
+        "You can only delete your own notifications",
+      );
     }
 
     return this.prisma.notification.delete({
       where: { id },
-    })
+    });
   }
 }
-

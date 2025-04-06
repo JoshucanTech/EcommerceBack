@@ -1,15 +1,15 @@
-import { NestFactory } from "@nestjs/core"
-import { AppModule } from "./app.module"
-import { ValidationPipe } from "@nestjs/common"
-import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger"
-import { ConfigService } from "@nestjs/config"
+import { NestFactory } from "@nestjs/core";
+import { AppModule } from "./app.module";
+import { ValidationPipe } from "@nestjs/common";
+import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
+import { ConfigService } from "@nestjs/config";
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule)
-  const configService = app.get(ConfigService)
+  const app = await NestFactory.create(AppModule);
+  const configService = app.get(ConfigService);
 
   // Enable CORS
-  app.enableCors()
+  app.enableCors();
 
   // Global validation pipe
   app.useGlobalPipes(
@@ -18,15 +18,17 @@ async function bootstrap() {
       transform: true,
       forbidNonWhitelisted: true,
     }),
-  )
+  );
 
   // Set global prefix
-  app.setGlobalPrefix("api")
+  app.setGlobalPrefix("api");
 
   // Swagger documentation setup
   const config = new DocumentBuilder()
     .setTitle("Multi-Vendor E-commerce API")
-    .setDescription("API documentation for the Multi-Vendor E-commerce platform")
+    .setDescription(
+      "API documentation for the Multi-Vendor E-commerce platform",
+    )
     .setVersion("1.0")
     .addBearerAuth()
     .addTag("auth", "Authentication endpoints")
@@ -44,16 +46,17 @@ async function bootstrap() {
     .addTag("reviews", "Product reviews endpoints")
     .addTag("comments", "Product comments endpoints")
     .addTag("flash-sales", "Flash sales endpoints")
-    .build()
+    .build();
 
-  const document = SwaggerModule.createDocument(app, config)
-  SwaggerModule.setup("api/docs", app, document)
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup("api/docs", app, document);
 
   // Start the server
-  const port = configService.get<number>("PORT") || 3000
-  await app.listen(port)
-  console.log(`Application is running on: http://localhost:${port}`)
-  console.log(`Swagger documentation available at: http://localhost:${port}/api/docs`)
+  const port = configService.get<number>("PORT") || 3000;
+  await app.listen(port);
+  console.log(`Application is running on: http://localhost:${port}`);
+  console.log(
+    `Swagger documentation available at: http://localhost:${port}/api/docs`,
+  );
 }
-bootstrap()
-
+bootstrap();

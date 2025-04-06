@@ -1,25 +1,25 @@
-import { Module } from "@nestjs/common"
-import { ConfigModule } from "@nestjs/config"
-import { APP_GUARD } from "@nestjs/core"
-import { JwtAuthGuard } from "./auth/guards/jwt-auth.guard"
-import { RolesGuard } from "./auth/guards/roles.guard"
+import { Module } from "@nestjs/common";
+import { ConfigModule } from "@nestjs/config";
+import { APP_GUARD } from "@nestjs/core";
+import { JwtAuthGuard } from "./auth/guards/jwt-auth.guard";
+import { RolesGuard } from "./auth/guards/roles.guard";
 
-import { PrismaModule } from "./prisma/prisma.module"
-import { AuthModule } from "./auth/auth.module"
-import { UsersModule } from "./users/users.module"
-import { ProductsModule } from "./products/products.module"
-import { CategoriesModule } from "./categories/categories.module"
-import { VendorsModule } from "./vendors/vendors.module"
-import { RidersModule } from "./riders/riders.module"
-import { OrdersModule } from "./orders/orders.module"
-import { DeliveriesModule } from "./deliveries/deliveries.module"
-import { PaymentsModule } from "./payments/payments.module"
-import { NotificationsModule } from "./notifications/notifications.module"
-import { CartModule } from "./cart/cart.module"
-import { WishlistModule } from "./wishlist/wishlist.module"
-import { ReviewsModule } from "./reviews/reviews.module"
-import { CommentsModule } from "./comments/comments.module"
-import { FlashSalesModule } from "./flash-sales/flash-sales.module"
+import { PrismaModule } from "./prisma/prisma.module";
+import { AuthModule } from "./auth/auth.module";
+import { UsersModule } from "./users/users.module";
+import { ProductsModule } from "./products/products.module";
+import { ProductsService } from "./products/products.service";
+import { VendorsModule } from "./vendors/vendors.module";
+import { RidersModule } from "./riders/riders.module";
+import { OrdersModule } from "./orders/orders.module";
+import { DeliveriesModule } from "./deliveries/deliveries.module";
+import { PaymentsModule } from "./payments/payments.module";
+import { NotificationsModule } from "./notifications/notifications.module";
+import { CartModule } from "./cart/cart.module";
+import { WishlistModule } from "./wishlist/wishlist.module";
+import { ReviewsModule } from "./reviews/reviews.module";
+import { CommentsModule } from "./comments/comments.module";
+import { FlashSalesModule } from "./flash-sales/flash-sales.module";
 
 @Module({
   imports: [
@@ -30,7 +30,6 @@ import { FlashSalesModule } from "./flash-sales/flash-sales.module"
     AuthModule,
     UsersModule,
     ProductsModule,
-    CategoriesModule,
     VendorsModule,
     RidersModule,
     OrdersModule,
@@ -44,6 +43,7 @@ import { FlashSalesModule } from "./flash-sales/flash-sales.module"
     FlashSalesModule,
   ],
   providers: [
+    ProductsService,
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard,
@@ -55,4 +55,3 @@ import { FlashSalesModule } from "./flash-sales/flash-sales.module"
   ],
 })
 export class AppModule {}
-

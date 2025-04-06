@@ -1,32 +1,53 @@
-import { ApiPropertyOptional } from "@nestjs/swagger"
-import { IsString, IsEmail, IsArray, IsOptional, IsEnum } from "class-validator"
-import { ApplicationStatus } from "@prisma/client"
+import { ApiPropertyOptional } from "@nestjs/swagger";
+import {
+  IsString,
+  IsEmail,
+  IsArray,
+  IsOptional,
+  IsEnum,
+} from "class-validator";
+import { ApplicationStatus } from "@prisma/client";
 
 export class UpdateVendorApplicationDto {
-  @ApiPropertyOptional({ description: "Business name", example: "Tech Gadgets Pro" })
+  @ApiPropertyOptional({
+    description: "Business name",
+    example: "Tech Gadgets Pro",
+  })
   @IsOptional()
   @IsString()
-  businessName?: string
+  businessName?: string;
 
-  @ApiPropertyOptional({ description: "Business email", example: "contact@techgadgetspro.com" })
+  @ApiPropertyOptional({
+    description: "Business email",
+    example: "contact@techgadgetspro.com",
+  })
   @IsOptional()
   @IsEmail()
-  businessEmail?: string
+  businessEmail?: string;
 
-  @ApiPropertyOptional({ description: "Business phone", example: "+1987654321" })
+  @ApiPropertyOptional({
+    description: "Business phone",
+    example: "+1987654321",
+  })
   @IsOptional()
   @IsString()
-  businessPhone?: string
+  businessPhone?: string;
 
-  @ApiPropertyOptional({ description: "Business address", example: "456 Business Ave, New York, NY 10002" })
+  @ApiPropertyOptional({
+    description: "Business address",
+    example: "456 Business Ave, New York, NY 10002",
+  })
   @IsOptional()
   @IsString()
-  businessAddress?: string
+  businessAddress?: string;
 
-  @ApiPropertyOptional({ description: "Business logo URL", example: "https://example.com/new-logo.jpg" })
+  @ApiPropertyOptional({
+    description: "Business logo URL",
+    example: "https://example.com/new-logo.jpg",
+  })
   @IsOptional()
   @IsString()
-  businessLogo?: string
+  businessLogo?: string;
 
   @ApiPropertyOptional({
     description: "Business description",
@@ -34,7 +55,7 @@ export class UpdateVendorApplicationDto {
   })
   @IsOptional()
   @IsString()
-  description?: string
+  description?: string;
 
   @ApiPropertyOptional({
     description: "Document URLs",
@@ -44,7 +65,7 @@ export class UpdateVendorApplicationDto {
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  documents?: string[]
+  documents?: string[];
 
   @ApiPropertyOptional({
     description: "Application status",
@@ -53,11 +74,13 @@ export class UpdateVendorApplicationDto {
   })
   @IsOptional()
   @IsEnum(ApplicationStatus)
-  status?: ApplicationStatus
+  status?: ApplicationStatus;
 
-  @ApiPropertyOptional({ description: "Admin notes", example: "All documents verified. Business looks legitimate." })
+  @ApiPropertyOptional({
+    description: "Admin notes",
+    example: "All documents verified. Business looks legitimate.",
+  })
   @IsOptional()
   @IsString()
-  notes?: string
+  notes?: string;
 }
-

@@ -1,16 +1,27 @@
-import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger"
-import { IsString, IsArray, IsUUID, IsOptional, ValidateNested, IsInt, Min } from "class-validator"
-import { Type } from "class-transformer"
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import {
+  IsString,
+  IsArray,
+  IsUUID,
+  IsOptional,
+  ValidateNested,
+  IsInt,
+  Min,
+} from "class-validator";
+import { Type } from "class-transformer";
 
 class OrderItemDto {
-  @ApiProperty({ description: "Product ID", example: "123e4567-e89b-12d3-a456-426614174000" })
+  @ApiProperty({
+    description: "Product ID",
+    example: "123e4567-e89b-12d3-a456-426614174000",
+  })
   @IsUUID()
-  productId: string
+  productId: string;
 
   @ApiProperty({ description: "Quantity", example: 2 })
   @IsInt()
   @Min(1)
-  quantity: number
+  quantity: number;
 }
 
 export class CreateOrderDto {
@@ -18,24 +29,29 @@ export class CreateOrderDto {
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => OrderItemDto)
-  items: OrderItemDto[]
+  items: OrderItemDto[];
 
   @ApiProperty({ description: "Payment method", example: "CREDIT_CARD" })
   @IsString()
-  paymentMethod: string
+  paymentMethod: string;
 
-  @ApiProperty({ description: "Address ID", example: "123e4567-e89b-12d3-a456-426614174000" })
+  @ApiProperty({
+    description: "Address ID",
+    example: "123e4567-e89b-12d3-a456-426614174000",
+  })
   @IsUUID()
-  addressId: string
+  addressId: string;
 
   @ApiPropertyOptional({ description: "Coupon code", example: "SUMMER20" })
   @IsOptional()
   @IsString()
-  couponCode?: string
+  couponCode?: string;
 
-  @ApiPropertyOptional({ description: "Order notes", example: "Please leave at the front door" })
+  @ApiPropertyOptional({
+    description: "Order notes",
+    example: "Please leave at the front door",
+  })
   @IsOptional()
   @IsString()
-  notes?: string
+  notes?: string;
 }
-

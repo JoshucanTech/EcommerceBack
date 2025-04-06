@@ -1,6 +1,6 @@
-import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger"
-import { IsEnum, IsOptional, IsString } from "class-validator"
-import { OrderStatus } from "@prisma/client"
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { IsEnum, IsOptional, IsString } from "class-validator";
+import { OrderStatus } from "@prisma/client";
 
 export class UpdateOrderStatusDto {
   @ApiProperty({
@@ -9,11 +9,13 @@ export class UpdateOrderStatusDto {
     example: OrderStatus.PROCESSING,
   })
   @IsEnum(OrderStatus)
-  status: OrderStatus
+  status: OrderStatus;
 
-  @ApiPropertyOptional({ description: "Status notes", example: "Order is being prepared for shipping" })
+  @ApiPropertyOptional({
+    description: "Status notes",
+    example: "Order is being prepared for shipping",
+  })
   @IsOptional()
   @IsString()
-  notes?: string
+  notes?: string;
 }
-

@@ -1,39 +1,160 @@
-import { Injectable, NotFoundException, ForbiddenException } from "@nestjs/common"
-import type { CreatePaymentDto } from "./dto/create-payment.dto"
-import type { UpdatePaymentDto } from "./dto/update-payment.dto"
-import type { PrismaService } from "../prisma/prisma.service"
-import { PaymentStatus, UserRole } from "@prisma/client"
+// backend/src/payments/payments.service.ts
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+  BadRequestException,
+} from "@nestjs/common";
+import type { PrismaService } from "../prisma/prisma.service";
+import type {
+  CreatePaymentDto,
+  CreateOrderPaymentDto,
+  CreateRiderPaymentDto,
+  CreateFeaturePaymentDto,
+} from "./dto/create-payment.dto";
+import type { UpdatePaymentDto } from "./dto/update-payment.dto";
+import { PaymentStatus, UserRole, PaymentMethod } from "@prisma/client";
 
 @Injectable()
 export class PaymentsService {
   constructor(private prisma: PrismaService) {}
 
   async create(createPaymentDto: CreatePaymentDto, userId: string) {
+    const { entityId, paymentType, ...paymentData } = createPaymentDto;
+
+    // Validate payment type and perform specific actions
+    switch (paymentType) {
+      case "ORDER":
+        return this.createOrderPayment(userId, {
+          ...paymentData,
+          orderId: entityId,
+        } as CreateOrderPaymentDto);
+      case "RIDER_PAYMENT":
+        return this.createRiderPayment(userId, {
+          ...paymentData,
+          riderId: entityId,
+        } as CreateRiderPaymentDto);
+      case "FEATURE_PAYMENT":
+        return this.createFeaturePayment(userId, {
+          ...paymentData,
+          featureId: entityId,
+        } as CreateFeaturePaymentDto);
+      default:
+        throw new BadRequestException("Invalid payment type");
+    }
+  }
+
+  private async createOrderPayment(
+    userId: string,
+    createOrderPaymentDto: CreateOrderPaymentDto,
+  ) {
+    const {
+      orderId,
+      amount,
+      method,
+      transactionReference,
+      status,
+      paymentType,
+    } = createOrderPaymentDto;
+
     // Verify the order exists and belongs to the user
     const order = await this.prisma.order.findUnique({
-      where: { id: createPaymentDto.orderId },
+      where: { id: orderId },
       include: { user: true },
-    })
+    });
 
     if (!order) {
-      throw new NotFoundException(`Order with ID ${createPaymentDto.orderId} not found`)
+      throw new NotFoundException(`Order with ID ${orderId} not found`);
     }
 
     if (order.userId !== userId) {
-      throw new ForbiddenException("You can only create payments for your own orders")
+      throw new ForbiddenException(
+        "You can only create payments for your own orders",
+      );
     }
 
     // Create the payment
     return this.prisma.payment.create({
       data: {
-        ...createPaymentDto,
-        user: { connect: { id: userId } },
+        orderId,
+        userId,
+        amount,
+        method,
+        transactionReference,
+        status,
+        paymentType,
       },
-    })
+    });
+  }
+
+  private async createRiderPayment(
+    userId: string,
+    createRiderPaymentDto: CreateRiderPaymentDto,
+  ) {
+    const {
+      riderId,
+      amount,
+      method,
+      transactionReference,
+      status,
+      paymentType,
+    } = createRiderPaymentDto;
+
+    // Verify the rider exists
+    const rider = await this.prisma.rider.findUnique({
+      where: { id: riderId },
+    });
+
+    if (!rider) {
+      throw new NotFoundException(`Rider with ID ${riderId} not found`);
+    }
+
+    // Create the payment
+    return this.prisma.payment.create({
+      data: {
+        riderId,
+        userId,
+        amount,
+        method,
+        transactionReference,
+        status,
+        paymentType,
+      },
+    });
+  }
+
+  private async createFeaturePayment(
+    userId: string,
+    createFeaturePaymentDto: CreateFeaturePaymentDto,
+  ) {
+    const {
+      featureId,
+      amount,
+      method,
+      transactionReference,
+      status,
+      paymentType,
+    } = createFeaturePaymentDto;
+
+    // In a real app, you'd validate the feature and its pricing here
+    // For example, check if the feature exists and the amount is correct
+
+    // Create the payment
+    return this.prisma.payment.create({
+      data: {
+        userId,
+        amount,
+        method,
+        transactionReference,
+        status,
+        details: { featureId }, // Store feature ID in details
+        paymentType,
+      },
+    });
   }
 
   async findAll(page: number, limit: number) {
-    const skip = (page - 1) * limit
+    const skip = (page - 1) * limit;
 
     const [payments, total] = await Promise.all([
       this.prisma.payment.findMany({
@@ -45,14 +166,13 @@ export class PaymentsService {
             select: {
               id: true,
               email: true,
-              name: true,
             },
           },
         },
         orderBy: { createdAt: "desc" },
       }),
       this.prisma.payment.count(),
-    ])
+    ]);
 
     return {
       data: payments,
@@ -62,11 +182,11 @@ export class PaymentsService {
         limit,
         totalPages: Math.ceil(total / limit),
       },
-    }
+    };
   }
 
   async findUserPayments(userId: string, page: number, limit: number) {
-    const skip = (page - 1) * limit
+    const skip = (page - 1) * limit;
 
     const [payments, total] = await Promise.all([
       this.prisma.payment.findMany({
@@ -79,7 +199,7 @@ export class PaymentsService {
         orderBy: { createdAt: "desc" },
       }),
       this.prisma.payment.count({ where: { userId } }),
-    ])
+    ]);
 
     return {
       data: payments,
@@ -89,10 +209,10 @@ export class PaymentsService {
         limit,
         totalPages: Math.ceil(total / limit),
       },
-    }
+    };
   }
 
-  async findOne(id: string, user: any) {
+  async findOne(id: string, userId: string) {
     const payment = await this.prisma.payment.findUnique({
       where: { id },
       include: {
@@ -101,54 +221,58 @@ export class PaymentsService {
           select: {
             id: true,
             email: true,
-            name: true,
           },
         },
       },
-    })
+    });
 
     if (!payment) {
-      throw new NotFoundException(`Payment with ID ${id} not found`)
+      throw new NotFoundException(`Payment with ID ${id} not found`);
     }
+
+    // Get the cu user
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
 
     // Check if the user is authorized to view this payment
     if (user.role !== UserRole.ADMIN && payment.userId !== user.id) {
-      throw new ForbiddenException("You can only view your own payments")
+      throw new ForbiddenException("You can only view your own payments");
     }
 
-    return payment
+    return payment;
   }
 
   async update(id: string, updatePaymentDto: UpdatePaymentDto) {
     // Check if payment exists
     const payment = await this.prisma.payment.findUnique({
       where: { id },
-    })
+    });
 
     if (!payment) {
-      throw new NotFoundException(`Payment with ID ${id} not found`)
+      throw new NotFoundException(`Payment with ID ${id} not found`);
     }
 
     // Update payment
     return this.prisma.payment.update({
       where: { id },
       data: updatePaymentDto,
-    })
+    });
   }
 
   async remove(id: string) {
     // Check if payment exists
     const payment = await this.prisma.payment.findUnique({
       where: { id },
-    })
+    });
 
     if (!payment) {
-      throw new NotFoundException(`Payment with ID ${id} not found`)
+      throw new NotFoundException(`Payment with ID ${id} not found`);
     }
 
     return this.prisma.payment.delete({
       where: { id },
-    })
+    });
   }
 
   async processWebhook(webhookData: any) {
@@ -159,16 +283,16 @@ export class PaymentsService {
     // 3. Update the payment status accordingly
 
     if (!webhookData.paymentId) {
-      return { success: false, message: "Invalid webhook data" }
+      return { success: false, message: "Invalid webhook data" };
     }
 
     try {
       const payment = await this.prisma.payment.findUnique({
         where: { id: webhookData.paymentId },
-      })
+      });
 
       if (!payment) {
-        return { success: false, message: "Payment not found" }
+        return { success: false, message: "Payment not found" };
       }
 
       // Update payment status based on webhook data
@@ -181,22 +305,25 @@ export class PaymentsService {
               : webhookData.status === "failed"
                 ? PaymentStatus.FAILED
                 : PaymentStatus.PENDING,
-          transactionReference: webhookData.transactionId || payment.transactionReference,
+          transactionReference:
+            webhookData.transactionId || payment.transactionReference,
         },
-      })
+      });
 
       // If payment is completed, update the order status
-      if (updatedPayment.status === PaymentStatus.COMPLETED) {
+      if (
+        updatedPayment.status === PaymentStatus.COMPLETED &&
+        updatedPayment.orderId
+      ) {
         await this.prisma.order.update({
           where: { id: payment.orderId },
           data: { paymentStatus: PaymentStatus.COMPLETED },
-        })
+        });
       }
 
-      return { success: true, payment: updatedPayment }
+      return { success: true, payment: updatedPayment };
     } catch (error) {
-      return { success: false, message: error.message }
+      return { success: false, message: error.message };
     }
   }
 }
-

@@ -1,22 +1,39 @@
-import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from "@nestjs/common"
-import type { PrismaService } from "../prisma/prisma.service"
-import type { CreateDeliveryDto } from "./dto/create-delivery.dto"
-import type { AssignRiderDto } from "./dto/assign-rider.dto"
-import type { UpdateDeliveryStatusDto } from "./dto/update-delivery-status.dto"
-import { DeliveryStatus, OrderStatus } from "@prisma/client"
+// backend/src/deliveries/deliveries.service.ts
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+  BadRequestException,
+} from "@nestjs/common";
+import type { PrismaService } from "../prisma/prisma.service";
+import type { CreateDeliveryDto } from "./dto/create-delivery.dto";
+import type { AssignRiderDto } from "./dto/assign-rider.dto";
+import type { UpdateDeliveryStatusDto } from "./dto/update-delivery-status.dto";
+import { DeliveryStatus, OrderStatus } from "@prisma/client";
+import { NotificationsService } from "../notifications/notifications.service";
 
 @Injectable()
 export class DeliveriesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private notificationsService: NotificationsService,
+  ) {}
 
   async create(createDeliveryDto: CreateDeliveryDto, user: any) {
-    const { orderId, pickupAddress, deliveryAddress, estimatedDeliveryTime, notes } = createDeliveryDto;
+    const {
+      orderId,
+      pickupAddress,
+      deliveryAddress,
+      estimatedDeliveryTime,
+      notes,
+    } = createDeliveryDto;
 
     // Check if order exists
     const order = await this.prisma.order.findUnique({
       where: { id: orderId },
       include: {
         vendor: true,
+        user: true,
         delivery: true,
       },
     });
@@ -27,20 +44,27 @@ export class DeliveriesService {
 
     // Check if delivery already exists for this order
     if (order.delivery) {
-      throw new BadRequestException('Delivery already exists for this order');
+      throw new BadRequestException("Delivery already exists for this order");
     }
 
     // Check if user is authorized to create delivery for this order
     if (
-      user.role !== 'ADMIN' &&
-      (user.role !== 'VENDOR' || order.vendor?.userId !== user.id)
+      user.role !== "ADMIN" &&
+      (user.role !== "VENDOR" || order.vendor?.userId !== user.id)
     ) {
-      throw new ForbiddenException('You do not have permission to create delivery for this order');
+      throw new ForbiddenException(
+        "You do not have permission to create delivery for this order",
+      );
     }
 
     // Check if order status is appropriate for delivery
-    if (order.status !== OrderStatus.PROCESSING && order.status !== OrderStatus.SHIPPED) {
-      throw new BadRequestException('Order must be in PROCESSING or SHIPPED status to create delivery');
+    if (
+      order.status !== OrderStatus.PROCESSING &&
+      order.status !== OrderStatus.SHIPPED
+    ) {
+      throw new BadRequestException(
+        "Order must be in PROCESSING or SHIPPED status to create delivery",
+      );
     }
 
     // Generate tracking number
@@ -52,7 +76,9 @@ export class DeliveriesService {
         orderId,
         pickupAddress,
         deliveryAddress,
-        estimatedDeliveryTime: estimatedDeliveryTime ? new Date(estimatedDeliveryTime) : undefined,
+        estimatedDeliveryTime: estimatedDeliveryTime
+          ? new Date(estimatedDeliveryTime)
+          : undefined,
         notes,
         trackingNumber,
         status: DeliveryStatus.PENDING,
@@ -79,28 +105,22 @@ export class DeliveriesService {
     }
 
     // Create notification for user
-    await this.prisma.notification.create({
-      data: {
-        userId: order.userId,
-        type: 'DELIVERY',
-        title: 'Delivery Created',
-        message: `Delivery for your order #${order.orderNumber} has been created. Tracking number: ${trackingNumber}`,
-        data: {
-          orderId: order.id,
-          deliveryId: delivery.id,
-          trackingNumber,
-        },
-      },
+    await this.notificationsService.create({
+      userId: order.userId,
+      type: "DELIVERY",
+      title: "Delivery Created",
+      message: `Delivery for your order #${order.orderNumber} has been created. Tracking number: ${trackingNumber}`,
+      data: `{
+       orderId: order.id,
+       deliveryId: delivery.id,
+       trackingNumber,
+     }`,
     });
 
     return delivery;
   }
 
-  async findAll(params: {
-    page: number;
-    limit: number;
-    status?: string;
-  }) {
+  async findAll(params: { page: number; limit: number; status?: string }) {
     const { page, limit, status } = params;
     const skip = (page - 1) * limit;
 
@@ -117,7 +137,7 @@ export class DeliveriesService {
         where,
         skip,
         take: limit,
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
         include: {
           order: {
             select: {
@@ -135,6 +155,7 @@ export class DeliveriesService {
                 select: {
                   id: true,
                   businessName: true,
+                  slug: true,
                 },
               },
             },
@@ -168,11 +189,14 @@ export class DeliveriesService {
     };
   }
 
-  async findRiderDeliveries(userId: string, params: {
-    page: number;
-    limit: number;
-    status?: string;
-  }) {
+  async findRiderDeliveries(
+    userId: string,
+    params: {
+      page: number;
+      limit: number;
+      status?: string;
+    },
+  ) {
     const { page, limit, status } = params;
     const skip = (page - 1) * limit;
 
@@ -182,7 +206,7 @@ export class DeliveriesService {
     });
 
     if (!rider) {
-      throw new ForbiddenException('User is not a rider');
+      throw new ForbiddenException("User is not a rider");
     }
 
     // Build where conditions
@@ -200,7 +224,7 @@ export class DeliveriesService {
         where,
         skip,
         take: limit,
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
         include: {
           order: {
             select: {
@@ -240,11 +264,14 @@ export class DeliveriesService {
     };
   }
 
-  async findVendorDeliveries(userId: string, params: {
-    page: number;
-    limit: number;
-    status?: string;
-  }) {
+  async findVendorDeliveries(
+    userId: string,
+    params: {
+      page: number;
+      limit: number;
+      status?: string;
+    },
+  ) {
     const { page, limit, status } = params;
     const skip = (page - 1) * limit;
 
@@ -254,7 +281,7 @@ export class DeliveriesService {
     });
 
     if (!vendor) {
-      throw new ForbiddenException('User is not a vendor');
+      throw new ForbiddenException("User is not a vendor");
     }
 
     // Build where conditions
@@ -274,7 +301,7 @@ export class DeliveriesService {
         where,
         skip,
         take: limit,
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
         include: {
           order: {
             select: {
@@ -319,11 +346,14 @@ export class DeliveriesService {
     };
   }
 
-  async findUserDeliveries(userId: string, params: {
-    page: number;
-    limit: number;
-    status?: string;
-  }) {
+  async findUserDeliveries(
+    userId: string,
+    params: {
+      page: number;
+      limit: number;
+      status?: string;
+    },
+  ) {
     const { page, limit, status } = params;
     const skip = (page - 1) * limit;
 
@@ -344,7 +374,7 @@ export class DeliveriesService {
         where,
         skip,
         take: limit,
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
         include: {
           order: {
             select: {
@@ -450,12 +480,14 @@ export class DeliveriesService {
 
     // Check if user is authorized to view this delivery
     if (
-      user.role !== 'ADMIN' &&
+      user.role !== "ADMIN" &&
       delivery.order.userId !== user.id &&
       delivery.order.vendor?.userId !== user.id &&
       delivery.rider?.userId !== user.id
     ) {
-      throw new ForbiddenException('You do not have permission to view this delivery');
+      throw new ForbiddenException(
+        "You do not have permission to view this delivery",
+      );
     }
 
     return delivery;
@@ -492,12 +524,14 @@ export class DeliveriesService {
     });
 
     if (!rider) {
-      throw new BadRequestException('Rider not found or not available');
+      throw new BadRequestException("Rider not found or not available");
     }
 
     // Check if delivery status is appropriate for rider assignment
     if (delivery.status !== DeliveryStatus.PENDING) {
-      throw new BadRequestException('Delivery must be in PENDING status to assign a rider');
+      throw new BadRequestException(
+        "Delivery must be in PENDING status to assign a rider",
+      );
     }
 
     // Update delivery
@@ -524,38 +558,38 @@ export class DeliveriesService {
     });
 
     // Create notification for user
-    await this.prisma.notification.create({
-      data: {
-        userId: delivery.order.userId,
-        type: 'DELIVERY',
-        title: 'Rider Assigned',
-        message: `A rider has been assigned to your delivery for order #${delivery.order.orderNumber}`,
-        data: {
-          orderId: delivery.order.id,
-          deliveryId: delivery.id,
-          riderId,
-        },
-      },
+    await this.notificationsService.create({
+      userId: delivery.order.userId,
+      type: "DELIVERY",
+      title: "Rider Assigned",
+      message: `A rider has been assigned to your delivery for order #${delivery.order.orderNumber}`,
+      data: `{
+       orderId: delivery.order.id,
+       deliveryId: delivery.id,
+       riderId,
+     }`,
     });
 
     // Create notification for rider
-    await this.prisma.notification.create({
-      data: {
-        userId: rider.userId,
-        type: 'DELIVERY',
-        title: 'New Delivery Assignment',
-        message: `You have been assigned to a new delivery for order #${delivery.order.orderNumber}`,
-        data: {
-          orderId: delivery.order.id,
-          deliveryId: delivery.id,
-        },
-      },
+    await this.notificationsService.create({
+      userId: rider.userId,
+      type: "DELIVERY",
+      title: "New Delivery Assignment",
+      message: `You have been assigned to a new delivery for order #${delivery.order.orderNumber}`,
+      data: `{
+       orderId: delivery.order.id,
+       deliveryId: delivery.id,
+     }`,
     });
 
     return updatedDelivery;
   }
 
-  async updateStatus(id: string, updateDeliveryStatusDto: UpdateDeliveryStatusDto, user: any) {
+  async updateStatus(
+    id: string,
+    updateDeliveryStatusDto: UpdateDeliveryStatusDto,
+    user: any,
+  ) {
     const { status, notes } = updateDeliveryStatusDto;
 
     // Check if delivery exists
@@ -587,26 +621,38 @@ export class DeliveriesService {
     // Check if user is authorized to update this delivery
     const isRider = delivery.rider?.userId === user.id;
     const isVendor = delivery.order.vendor?.userId === user.id;
-    const isAdmin = user.role === 'ADMIN';
+    const isAdmin = user.role === "ADMIN";
 
     if (!isRider && !isVendor && !isAdmin) {
-      throw new ForbiddenException('You do not have permission to update this delivery');
+      throw new ForbiddenException(
+        "You do not have permission to update this delivery",
+      );
     }
 
     // Validate status transition
-    this.validateStatusTransition(delivery.status, status, isRider, isVendor, isAdmin);
+    this.validateStatusTransition(
+      delivery.status,
+      status,
+      isRider,
+      isVendor,
+      isAdmin,
+    );
 
     // Update delivery
     const updatedDelivery = await this.prisma.delivery.update({
       where: { id },
       data: {
         status,
-        actualDeliveryTime: status === DeliveryStatus.DELIVERED ? new Date() : undefined,
+        actualDeliveryTime:
+          status === DeliveryStatus.DELIVERED ? new Date() : undefined,
       },
     });
 
     // Update order status if delivery is delivered
-    if (status === DeliveryStatus.DELIVERED && delivery.order.status !== OrderStatus.DELIVERED) {
+    if (
+      status === DeliveryStatus.DELIVERED &&
+      delivery.order.status !== OrderStatus.DELIVERED
+    ) {
       await this.prisma.order.update({
         where: { id: delivery.order.id },
         data: {
@@ -616,18 +662,16 @@ export class DeliveriesService {
     }
 
     // Create notification for user
-    await this.prisma.notification.create({
-      data: {
-        userId: delivery.order.userId,
-        type: 'DELIVERY',
-        title: 'Delivery Status Updated',
-        message: `Your delivery for order #${delivery.order.orderNumber} has been updated to ${status}${notes ? `: ${notes}` : ''}`,
-        data: {
-          orderId: delivery.order.id,
-          deliveryId: delivery.id,
-          status,
-        },
-      },
+    await this.notificationsService.create({
+      userId: delivery.order.userId,
+      type: "DELIVERY",
+      title: "Delivery Status Updated",
+      message: `Your delivery for order #${delivery.order.orderNumber} has been updated to ${status}${notes ? `: ${notes}` : ""}`,
+      data: `{
+       orderId: delivery.order.id,
+       deliveryId: delivery.id,
+       status,
+     }`,
     });
 
     // Create rider earnings if delivery is completed
@@ -637,9 +681,9 @@ export class DeliveriesService {
         where: { id: delivery.order.id },
         select: { totalAmount: true },
       });
-      
+
       const earnings = Math.max(order.totalAmount * 0.1, 5);
-      
+
       await this.prisma.riderEarning.create({
         data: {
           riderId: delivery.riderId,
@@ -662,15 +706,43 @@ export class DeliveriesService {
   ) {
     // Define valid status transitions
     const validTransitions = {
-      [DeliveryStatus.PENDING]: [DeliveryStatus.ASSIGNED, DeliveryStatus.CANCELLED],
-      [DeliveryStatus.ASSIGNED]: [DeliveryStatus.PICKED_UP, DeliveryStatus.CANCELLED],
-      [DeliveryStatus.PICKED_UP]: [DeliveryStatus.IN_TRANSIT, DeliveryStatus.CANCELLED],
-      [DeliveryStatus.IN_TRANSIT]: [DeliveryStatus.DELIVERED, DeliveryStatus.FAILED],
+      [DeliveryStatus.PENDING]: [
+        DeliveryStatus.ASSIGNED,
+        DeliveryStatus.CANCELLED,
+      ],
+      [DeliveryStatus.ASSIGNED]: [
+        DeliveryStatus.PICKED_UP,
+        DeliveryStatus.CANCELLED,
+      ],
+      [DeliveryStatus.PICKED_UP]: [
+        DeliveryStatus.IN_TRANSIT,
+        DeliveryStatus.CANCELLED,
+      ],
+      [DeliveryStatus.IN_TRANSIT]: [
+        DeliveryStatus.DELIVERED,
+        DeliveryStatus.FAILED,
+      ],
       [DeliveryStatus.DELIVERED]: [],
       [DeliveryStatus.FAILED]: [DeliveryStatus.PENDING],
       [DeliveryStatus.CANCELLED]: [DeliveryStatus.PENDING],
     };
 
     // Check if transition is valid
-    if (!validTransitions[currentStatus].includes(\
+    if (!validTransitions[currentStatus].includes(newStatus)) {
+      throw new BadRequestException(
+        `Cannot transition from ${currentStatus} to ${newStatus}`,
+      );
+    }
+  }
 
+  private generateTrackingNumber(): string {
+    const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    let trackingNumber = "";
+    for (let i = 0; i < 10; i++) {
+      trackingNumber += characters.charAt(
+        Math.floor(Math.random() * characters.length),
+      );
+    }
+    return trackingNumber;
+  }
+}

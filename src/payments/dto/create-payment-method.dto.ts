@@ -1,5 +1,5 @@
-import { ApiProperty } from "@nestjs/swagger"
-import { IsNotEmpty, IsString, IsBoolean, IsOptional } from "class-validator"
+import { ApiProperty } from "@nestjs/swagger";
+import { IsNotEmpty, IsString, IsBoolean, IsOptional } from "class-validator";
 
 export class CreatePaymentMethodDto {
   @ApiProperty({
@@ -8,7 +8,7 @@ export class CreatePaymentMethodDto {
   })
   @IsString()
   @IsNotEmpty()
-  paymentMethodId: string
+  paymentMethodId: string;
 
   @ApiProperty({
     example: true,
@@ -17,6 +17,5 @@ export class CreatePaymentMethodDto {
   })
   @IsBoolean()
   @IsOptional()
-  isDefault?: boolean
+  isDefault?: boolean;
 }
-

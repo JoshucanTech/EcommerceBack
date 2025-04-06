@@ -1,6 +1,6 @@
-import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger"
-import { IsString, IsEnum, IsOptional } from "class-validator"
-import { VehicleType } from "@prisma/client"
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { IsString, IsEnum, IsOptional } from "class-validator";
+import { VehicleType } from "@prisma/client";
 
 export class CreateRiderApplicationDto {
   @ApiProperty({
@@ -9,19 +9,28 @@ export class CreateRiderApplicationDto {
     example: VehicleType.MOTORCYCLE,
   })
   @IsEnum(VehicleType)
-  vehicleType: VehicleType
+  vehicleType: VehicleType;
 
-  @ApiPropertyOptional({ description: "Vehicle plate number", example: "ABC123" })
+  @ApiPropertyOptional({
+    description: "Vehicle plate number",
+    example: "ABC123",
+  })
   @IsOptional()
   @IsString()
-  vehiclePlate?: string
+  vehiclePlate?: string;
 
   @ApiProperty({ description: "Driver license number", example: "DL12345678" })
   @IsString()
-  licenseNumber: string
+  licenseNumber: string;
 
-  @ApiProperty({ description: "Identity document URL", example: "https://example.com/id-document.pdf" })
+  @ApiProperty({
+    description: "Identity document URL",
+    example: "https://example.com/id-document.pdf",
+  })
   @IsString()
-  identityDocument: string
-}
+  identityDocument: string;
 
+  @ApiProperty({ description: "User ID", example: "1234-5678-9012" })
+  @IsString()
+  userId: string;
+}

@@ -1,5 +1,6 @@
 import { PrismaClient, UserRole } from "@prisma/client"
 import * as bcrypt from "bcrypt"
+import { generateSlug } from "src/utils/slug-generator"
 
 const prisma = new PrismaClient()
 
@@ -58,6 +59,7 @@ async function main() {
           businessAddress: "123 Business St, New York, NY 10001",
           description: "We sell the best quality products at affordable prices.",
           isVerified: true,
+          slug:""
         },
       },
     },
@@ -136,6 +138,7 @@ async function main() {
         name: "Electronics",
         description: "Electronic devices and accessories",
         image: "https://example.com/electronics.jpg",
+        slug:""
       },
     }),
     prisma.category.create({
@@ -143,6 +146,7 @@ async function main() {
         name: "Clothing",
         description: "Apparel and fashion items",
         image: "https://example.com/clothing.jpg",
+        slug:"",
       },
     }),
     prisma.category.create({
@@ -150,6 +154,7 @@ async function main() {
         name: "Home & Kitchen",
         description: "Home appliances and kitchen essentials",
         image: "https://example.com/home.jpg",
+        slug:"",
       },
     }),
   ])
@@ -163,6 +168,7 @@ async function main() {
         description: "Mobile phones and accessories",
         image: "https://example.com/smartphones.jpg",
         parentId: categories[0].id,
+        slug:"",
       },
     }),
     prisma.category.create({
@@ -171,6 +177,7 @@ async function main() {
         description: "Notebooks and accessories",
         image: "https://example.com/laptops.jpg",
         parentId: categories[0].id,
+        slug:"",
       },
     }),
   ])
@@ -198,6 +205,7 @@ async function main() {
             vendorId,
           },
         },
+        slug:"",
       },
     }),
     prisma.product.create({
@@ -211,6 +219,7 @@ async function main() {
         images: ["https://example.com/laptop-pro-1.jpg", "https://example.com/laptop-pro-2.jpg"],
         isPublished: true,
         vendorId,
+        slug:"",
         categoryId: electronicsSubcategories[1].id,
         inventory: {
           create: {
@@ -232,6 +241,7 @@ async function main() {
       endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
       isActive: true,
       vendorId,
+      slug:"",
       items: {
         create: [
           {

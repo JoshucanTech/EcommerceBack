@@ -1,6 +1,13 @@
-import { ApiProperty } from "@nestjs/swagger"
-import { IsEmail, IsNotEmpty, IsString, MinLength, IsOptional, IsEnum } from "class-validator"
-import { UserRole } from "@prisma/client"
+import { ApiProperty } from "@nestjs/swagger";
+import {
+  IsEmail,
+  IsNotEmpty,
+  IsString,
+  MinLength,
+  IsOptional,
+  IsEnum,
+} from "class-validator";
+import { UserRole } from "@prisma/client";
 
 export class CreateUserDto {
   @ApiProperty({
@@ -9,7 +16,7 @@ export class CreateUserDto {
   })
   @IsEmail({}, { message: "Please provide a valid email address" })
   @IsNotEmpty({ message: "Email is required" })
-  email: string
+  email: string;
 
   @ApiProperty({
     example: "password123",
@@ -18,7 +25,7 @@ export class CreateUserDto {
   @IsString()
   @IsNotEmpty({ message: "Password is required" })
   @MinLength(6, { message: "Password must be at least 6 characters long" })
-  password: string
+  password: string;
 
   @ApiProperty({
     example: "John",
@@ -26,7 +33,7 @@ export class CreateUserDto {
   })
   @IsString()
   @IsNotEmpty({ message: "First name is required" })
-  firstName: string
+  firstName: string;
 
   @ApiProperty({
     example: "Doe",
@@ -34,7 +41,7 @@ export class CreateUserDto {
   })
   @IsString()
   @IsNotEmpty({ message: "Last name is required" })
-  lastName: string
+  lastName: string;
 
   @ApiProperty({
     example: "+1234567890",
@@ -43,7 +50,7 @@ export class CreateUserDto {
   })
   @IsString()
   @IsOptional()
-  phone?: string
+  phone?: string;
 
   @ApiProperty({
     example: "https://example.com/avatar.jpg",
@@ -52,7 +59,7 @@ export class CreateUserDto {
   })
   @IsString()
   @IsOptional()
-  avatar?: string
+  avatar?: string;
 
   @ApiProperty({
     enum: UserRole,
@@ -61,6 +68,5 @@ export class CreateUserDto {
   })
   @IsEnum(UserRole)
   @IsOptional()
-  role?: UserRole
+  role?: UserRole;
 }
-

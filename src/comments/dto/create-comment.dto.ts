@@ -1,14 +1,20 @@
-import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger"
-import { IsString, IsUUID, IsOptional } from "class-validator"
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { IsString, IsUUID, IsOptional } from "class-validator";
 
 export class CreateCommentDto {
-  @ApiProperty({ description: "Comment content", example: "This product looks great! Does it come in other colors?" })
+  @ApiProperty({
+    description: "Comment content",
+    example: "This product looks great! Does it come in other colors?",
+  })
   @IsString()
-  content: string
+  content: string;
 
-  @ApiProperty({ description: "Product ID", example: "123e4567-e89b-12d3-a456-426614174000" })
+  @ApiProperty({
+    description: "Product ID",
+    example: "123e4567-e89b-12d3-a456-426614174000",
+  })
   @IsUUID()
-  productId: string
+  productId: string;
 
   @ApiPropertyOptional({
     description: "Parent comment ID (for replies)",
@@ -16,6 +22,5 @@ export class CreateCommentDto {
   })
   @IsOptional()
   @IsUUID()
-  parentId?: string
+  parentId?: string;
 }
-

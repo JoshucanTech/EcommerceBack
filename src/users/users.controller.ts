@@ -1,15 +1,33 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query } from "@nestjs/common"
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiBearerAuth } from "@nestjs/swagger"
-import type { UsersService } from "./users.service"
-import type { UpdateUserDto } from "./dto/update-user.dto"
-import type { UpdateProfileDto } from "./dto/update-profile.dto"
-import type { CreateAddressDto } from "./dto/create-address.dto"
-import type { UpdateAddressDto } from "./dto/update-address.dto"
-import type { UpdateSettingsDto } from "./dto/update-settings.dto"
-import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard"
-import { RolesGuard } from "../auth/guards/roles.guard"
-import { Roles } from "../auth/decorators/roles.decorator"
-import { CurrentUser } from "../auth/decorators/current-user.decorator"
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseGuards,
+  Query,
+} from "@nestjs/common";
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiParam,
+  ApiQuery,
+  ApiBearerAuth,
+} from "@nestjs/swagger";
+import type { UsersService } from "./users.service";
+import type { UpdateUserDto } from "./dto/update-user.dto";
+import type { UpdateProfileDto } from "./dto/update-profile.dto";
+import type { CreateAddressDto } from "./dto/create-address.dto";
+import type { UpdateAddressDto } from "./dto/update-address.dto";
+import type { UpdateSettingsDto } from "./dto/update-settings.dto";
+import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
+import { RolesGuard } from "../auth/guards/roles.guard";
+import { Roles } from "../auth/decorators/roles.decorator";
+import { CurrentUser } from "../auth/decorators/current-user.decorator";
+import { Prisma } from "@prisma/client";
 
 @ApiTags("users")
 @Controller("users")
@@ -22,37 +40,63 @@ export class UsersController {
   @UseGuards(RolesGuard)
   @Roles("ADMIN")
   @ApiOperation({ summary: "Get all users (admin only)" })
-  @ApiQuery({ name: "page", required: false, type: Number, description: "Page number" })
-  @ApiQuery({ name: "limit", required: false, type: Number, description: "Items per page" })
-  @ApiQuery({ name: "search", required: false, type: String, description: "Search term" })
-  @ApiQuery({ name: "role", required: false, type: String, description: "Filter by role" })
+  @ApiQuery({
+    name: "page",
+    required: false,
+    type: Number,
+    description: "Page number",
+  })
+  @ApiQuery({
+    name: "limit",
+    required: false,
+    type: Number,
+    description: "Items per page",
+  })
+  @ApiQuery({
+    name: "search",
+    required: false,
+    type: String,
+    description: "Search term",
+  })
+  @ApiQuery({
+    name: "role",
+    required: false,
+    type: String,
+    description: "Filter by role",
+  })
   @ApiResponse({ status: 200, description: "Returns paginated users" })
   @ApiResponse({ status: 401, description: "Unauthorized" })
-  @ApiResponse({ status: 403, description: "Forbidden - Insufficient permissions" })
+  @ApiResponse({
+    status: 403,
+    description: "Forbidden - Insufficient permissions",
+  })
   findAll(
-    @Query('page') page?: number,
-    @Query('limit') limit?: number,
-    @Query('search') search?: string,
-    @Query('role') role?: string,
+    @Query("page") page?: number,
+    @Query("limit") limit?: number,
+    @Query("search") search?: string,
+    @Query("role") role?: string,
   ) {
     return this.usersService.findAll({
       page: page || 1,
       limit: limit || 10,
       search,
       role,
-    })
+    });
   }
 
-  @Get(':id')
+  @Get(":id")
   @UseGuards(RolesGuard)
-  @Roles('ADMIN')
-  @ApiOperation({ summary: 'Get a user by ID (admin only)' })
-  @ApiParam({ name: 'id', description: 'User ID' })
-  @ApiResponse({ status: 200, description: 'Returns the user' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Insufficient permissions' })
-  @ApiResponse({ status: 404, description: 'User not found' })
-  findOne(@Param('id') id: string) {
+  @Roles("ADMIN")
+  @ApiOperation({ summary: "Get a user by ID (admin only)" })
+  @ApiParam({ name: "id", description: "User ID" })
+  @ApiResponse({ status: 200, description: "Returns the user" })
+  @ApiResponse({ status: 401, description: "Unauthorized" })
+  @ApiResponse({
+    status: 403,
+    description: "Forbidden - Insufficient permissions",
+  })
+  @ApiResponse({ status: 404, description: "User not found" })
+  findOne(@Param("id") id: string) {
     return this.usersService.findOne(id);
   }
 
@@ -61,8 +105,11 @@ export class UsersController {
   @ApiResponse({ status: 200, description: "Profile updated successfully" })
   @ApiResponse({ status: 400, description: "Bad request" })
   @ApiResponse({ status: 401, description: "Unauthorized" })
-  updateProfile(@CurrentUser() user, @Body() updateProfileDto: UpdateProfileDto) {
-    return this.usersService.updateProfile(user.id, updateProfileDto)
+  updateProfile(
+    @CurrentUser() user,
+    @Body() updateProfileDto: UpdateProfileDto,
+  ) {
+    return this.usersService.updateProfile(user.id, updateProfileDto);
   }
 
   @Patch("settings")
@@ -70,14 +117,17 @@ export class UsersController {
   @ApiResponse({ status: 200, description: "Settings updated successfully" })
   @ApiResponse({ status: 400, description: "Bad request" })
   @ApiResponse({ status: 401, description: "Unauthorized" })
-  updateSettings(@CurrentUser() user, @Body() updateSettingsDto: UpdateSettingsDto) {
-    return this.usersService.updateSettings(user.id, updateSettingsDto)
+  updateSettings(
+    @CurrentUser() user,
+    @Body() updateSettingsDto: UpdateSettingsDto,
+  ) {
+    return this.usersService.updateSettings(user.id, updateSettingsDto);
   }
 
-  @Get('addresses')
-  @ApiOperation({ summary: 'Get user addresses' })
-  @ApiResponse({ status: 200, description: 'Returns user addresses' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @Get("addresses")
+  @ApiOperation({ summary: "Get user addresses" })
+  @ApiResponse({ status: 200, description: "Returns user addresses" })
+  @ApiResponse({ status: 401, description: "Unauthorized" })
   getAddresses(@CurrentUser() user) {
     return this.usersService.getAddresses(user.id);
   }
@@ -87,8 +137,11 @@ export class UsersController {
   @ApiResponse({ status: 201, description: "Address created successfully" })
   @ApiResponse({ status: 400, description: "Bad request" })
   @ApiResponse({ status: 401, description: "Unauthorized" })
-  createAddress(@CurrentUser() user, @Body() createAddressDto: CreateAddressDto) {
-    return this.usersService.createAddress(user.id, createAddressDto)
+  createAddress(
+    @CurrentUser() user,
+    @Body() createAddressDto: Prisma.AddressCreateInput,
+  ) {
+    return this.usersService.createAddress(user.id, createAddressDto);
   }
 
   @Patch("addresses/:id")
@@ -98,8 +151,12 @@ export class UsersController {
   @ApiResponse({ status: 400, description: "Bad request" })
   @ApiResponse({ status: 401, description: "Unauthorized" })
   @ApiResponse({ status: 404, description: "Address not found" })
-  updateAddress(@CurrentUser() user, @Param('id') id: string, @Body() updateAddressDto: UpdateAddressDto) {
-    return this.usersService.updateAddress(user.id, id, updateAddressDto)
+  updateAddress(
+    @CurrentUser() user,
+    @Param("id") id: string,
+    @Body() updateAddressDto: UpdateAddressDto,
+  ) {
+    return this.usersService.updateAddress(user.id, id, updateAddressDto);
   }
 
   @Delete("addresses/:id")
@@ -108,8 +165,8 @@ export class UsersController {
   @ApiResponse({ status: 200, description: "Address deleted successfully" })
   @ApiResponse({ status: 401, description: "Unauthorized" })
   @ApiResponse({ status: 404, description: "Address not found" })
-  removeAddress(@CurrentUser() user, @Param('id') id: string) {
-    return this.usersService.removeAddress(user.id, id)
+  removeAddress(@CurrentUser() user, @Param("id") id: string) {
+    return this.usersService.removeAddress(user.id, id);
   }
 
   @Patch(":id")
@@ -120,10 +177,12 @@ export class UsersController {
   @ApiResponse({ status: 200, description: "User updated successfully" })
   @ApiResponse({ status: 400, description: "Bad request" })
   @ApiResponse({ status: 401, description: "Unauthorized" })
-  @ApiResponse({ status: 403, description: "Forbidden - Insufficient permissions" })
+  @ApiResponse({
+    status: 403,
+    description: "Forbidden - Insufficient permissions",
+  })
   @ApiResponse({ status: 404, description: "User not found" })
-  update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
-    return this.usersService.update(id, updateUserDto)
+  update(@Param("id") id: string, @Body() updateUserDto: UpdateUserDto) {
+    return this.usersService.update(id, updateUserDto);
   }
 }
-

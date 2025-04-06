@@ -1,40 +1,66 @@
-import { ApiProperty } from "@nestjs/swagger"
-import { IsEnum, IsNotEmpty, IsOptional, IsString, IsUUID } from "class-validator"
-import { NotificationType } from "@prisma/client"
+import { ApiProperty } from "@nestjs/swagger";
+import {
+  IsEnum,
+  IsJSON,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsUUID,
+} from "class-validator";
+import { NotificationType } from "@prisma/client";
 
 export class CreateNotificationDto {
   @ApiProperty({ description: "User ID to send notification to" })
   @IsUUID()
   @IsNotEmpty()
-  userId: string
+  userId: string;
 
-  @ApiProperty({ description: "Notification title", example: "Order Confirmed" })
+  @ApiProperty({
+    description: "Notification title",
+    example: "Order Confirmed",
+  })
   @IsString()
   @IsNotEmpty()
-  title: string
+  title: string;
 
-  @ApiProperty({ description: "Notification message", example: "Your order #12345 has been confirmed" })
+  @ApiProperty({
+    description: "Notification message",
+    example: "Your order #12345 has been confirmed",
+  })
   @IsString()
   @IsNotEmpty()
-  message: string
+  message: string;
 
   @ApiProperty({
     description: "Notification type",
     enum: NotificationType,
-    example: NotificationType.ORDER,
+    example: NotificationType.ORDER_STATUS,
   })
   @IsEnum(NotificationType)
   @IsNotEmpty()
-  type: NotificationType
+  type: NotificationType;
 
-  @ApiProperty({ description: "Related entity ID (order, product, etc.)", required: false })
+  @ApiProperty({
+    description: "Related entity ID (order, product, etc.)",
+    required: false,
+  })
   @IsUUID()
   @IsOptional()
-  entityId?: string
+  entityId?: string;
 
-  @ApiProperty({ description: "URL to redirect when notification is clicked", required: false })
+  @ApiProperty({
+    description: "Related entity ID (order, product, etc.)",
+    required: false,
+  })
+  @IsJSON()
+  @IsOptional()
+  data?: string;
+
+  @ApiProperty({
+    description: "URL to redirect when notification is clicked",
+    required: false,
+  })
   @IsString()
   @IsOptional()
-  redirectUrl?: string
+  redirectUrl?: string;
 }
-

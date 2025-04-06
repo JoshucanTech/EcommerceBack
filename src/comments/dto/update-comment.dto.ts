@@ -1,5 +1,5 @@
-import { ApiProperty } from "@nestjs/swagger"
-import { IsString } from "class-validator"
+import { ApiProperty } from "@nestjs/swagger";
+import { IsString } from "class-validator";
 
 export class UpdateCommentDto {
   @ApiProperty({
@@ -7,6 +7,5 @@ export class UpdateCommentDto {
     example: "I would like to know if this product is available in blue?",
   })
   @IsString()
-  content: string
+  content: string;
 }
-

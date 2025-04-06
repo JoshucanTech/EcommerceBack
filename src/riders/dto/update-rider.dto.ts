@@ -1,6 +1,12 @@
-import { ApiPropertyOptional } from "@nestjs/swagger"
-import { IsString, IsEnum, IsOptional, IsBoolean, IsNumber } from "class-validator"
-import { VehicleType } from "@prisma/client"
+import { ApiPropertyOptional } from "@nestjs/swagger";
+import {
+  IsString,
+  IsEnum,
+  IsOptional,
+  IsBoolean,
+  IsNumber,
+} from "class-validator";
+import { VehicleType } from "@prisma/client";
 
 export class UpdateRiderDto {
   @ApiPropertyOptional({
@@ -10,41 +16,52 @@ export class UpdateRiderDto {
   })
   @IsOptional()
   @IsEnum(VehicleType)
-  vehicleType?: VehicleType
+  vehicleType?: VehicleType;
 
-  @ApiPropertyOptional({ description: "Vehicle plate number", example: "ABC123" })
+  @ApiPropertyOptional({
+    description: "Vehicle plate number",
+    example: "ABC123",
+  })
   @IsOptional()
   @IsString()
-  vehiclePlate?: string
+  vehiclePlate?: string;
 
-  @ApiPropertyOptional({ description: "Driver license number", example: "DL12345678" })
+  @ApiPropertyOptional({
+    description: "Driver license number",
+    example: "DL12345678",
+  })
   @IsOptional()
   @IsString()
-  licenseNumber?: string
+  licenseNumber?: string;
 
-  @ApiPropertyOptional({ description: "Identity document URL", example: "https://example.com/id-document.pdf" })
+  @ApiPropertyOptional({
+    description: "Identity document URL",
+    example: "https://example.com/id-document.pdf",
+  })
   @IsOptional()
   @IsString()
-  identityDocument?: string
+  identityDocument?: string;
 
   @ApiPropertyOptional({ description: "Is rider verified", example: true })
   @IsOptional()
   @IsBoolean()
-  isVerified?: boolean
+  isVerified?: boolean;
 
-  @ApiPropertyOptional({ description: "Is rider available for deliveries", example: true })
+  @ApiPropertyOptional({
+    description: "Is rider available for deliveries",
+    example: true,
+  })
   @IsOptional()
   @IsBoolean()
-  isAvailable?: boolean
+  isAvailable?: boolean;
 
   @ApiPropertyOptional({ description: "Current latitude", example: 40.7128 })
   @IsOptional()
   @IsNumber()
-  currentLatitude?: number
+  currentLatitude?: number;
 
   @ApiPropertyOptional({ description: "Current longitude", example: -74.006 })
   @IsOptional()
   @IsNumber()
-  currentLongitude?: number
+  currentLongitude?: number;
 }
-

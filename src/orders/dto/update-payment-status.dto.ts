@@ -1,19 +1,21 @@
-import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger"
-import { IsEnum, IsOptional, IsString } from "class-validator"
-import { PaymentStatus } from "@prisma/client"
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { IsEnum, IsOptional, IsString } from "class-validator";
+import { PaymentStatus } from "@prisma/client";
 
 export class UpdatePaymentStatusDto {
   @ApiProperty({
     description: "Payment status",
     enum: PaymentStatus,
-    example: PaymentStatus.PAID,
+    example: PaymentStatus.COMPLETED,
   })
   @IsEnum(PaymentStatus)
-  status: PaymentStatus
+  status: PaymentStatus;
 
-  @ApiPropertyOptional({ description: "Payment reference", example: "TXN123456789" })
+  @ApiPropertyOptional({
+    description: "Payment reference",
+    example: "TXN123456789",
+  })
   @IsOptional()
   @IsString()
-  reference?: string
+  reference?: string;
 }
-

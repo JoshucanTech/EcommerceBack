@@ -1,5 +1,9 @@
-import { Injectable, NotFoundException, ConflictException } from "@nestjs/common"
-import type { PrismaService } from "../prisma/prisma.service"
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from "@nestjs/common";
+import type { PrismaService } from "../prisma/prisma.service";
 
 @Injectable()
 export class WishlistService {
@@ -32,10 +36,10 @@ export class WishlistService {
             flashSaleItems: {
               include: {
                 flashSale: {
-                  where: {
+                  select: {
                     isActive: true,
-                    startDate: { lte: new Date() },
-                    endDate: { gte: new Date() },
+                    startDate: true,
+                    endDate: true,
                   },
                 },
               },
@@ -46,20 +50,27 @@ export class WishlistService {
       orderBy: {
         createdAt: "desc",
       },
-    })
+    });
 
     // Process items to include average rating and flash sale info
     const items = wishlistItems.map((item) => {
       const avgRating =
         item.product.reviews.length > 0
-          ? item.product.reviews.reduce((sum, review) => sum + review.rating, 0) / item.product.reviews.length
-          : 0
+          ? item.product.reviews.reduce(
+              (sum, review) => sum + review.rating,
+              0,
+            ) / item.product.reviews.length
+          : 0;
 
-      const activeFlashSale = item.product.flashSaleItems.find((fsi) => fsi.flashSale !== null)
-      const price = item.product.discountPrice || item.product.price
-      const flashSalePrice = activeFlashSale ? price * (1 - activeFlashSale.discountPercentage / 100) : null
+      const activeFlashSale = item.product.flashSaleItems.find(
+        (fsi) => fsi.flashSale !== null,
+      );
+      const price = item.product.discountPrice || item.product.price;
+      const flashSalePrice = activeFlashSale
+        ? price * (1 - activeFlashSale.discountPercentage / 100)
+        : null;
 
-      const { reviews, flashSaleItems, ...productRest } = item.product
+      const { reviews, flashSaleItems, ...productRest } = item.product;
 
       return {
         id: item.id,
@@ -77,23 +88,23 @@ export class WishlistService {
             : null,
         },
         addedAt: item.createdAt,
-      }
-    })
+      };
+    });
 
     return {
       items,
       count: items.length,
-    }
+    };
   }
 
   async addToWishlist(userId: string, productId: string) {
     // Check if product exists
     const product = await this.prisma.product.findUnique({
       where: { id: productId },
-    })
+    });
 
     if (!product) {
-      throw new NotFoundException(`Product with ID ${productId} not found`)
+      throw new NotFoundException(`Product with ID ${productId} not found`);
     }
 
     // Check if product is already in wishlist
@@ -104,10 +115,10 @@ export class WishlistService {
           productId,
         },
       },
-    })
+    });
 
     if (existingItem) {
-      throw new ConflictException("Product is already in wishlist")
+      throw new ConflictException("Product is already in wishlist");
     }
 
     // Add product to wishlist
@@ -116,9 +127,9 @@ export class WishlistService {
         userId,
         productId,
       },
-    })
+    });
 
-    return { message: "Product added to wishlist successfully" }
+    return { message: "Product added to wishlist successfully" };
   }
 
   async removeFromWishlist(userId: string, productId: string) {
@@ -130,10 +141,12 @@ export class WishlistService {
           productId,
         },
       },
-    })
+    });
 
     if (!wishlistItem) {
-      throw new NotFoundException(`Product with ID ${productId} not found in wishlist`)
+      throw new NotFoundException(
+        `Product with ID ${productId} not found in wishlist`,
+      );
     }
 
     // Remove product from wishlist
@@ -144,18 +157,17 @@ export class WishlistService {
           productId,
         },
       },
-    })
+    });
 
-    return { message: "Product removed from wishlist successfully" }
+    return { message: "Product removed from wishlist successfully" };
   }
 
   async clearWishlist(userId: string) {
     // Delete all wishlist items for user
     await this.prisma.wishlistItem.deleteMany({
       where: { userId },
-    })
+    });
 
-    return { message: "Wishlist cleared successfully" }
+    return { message: "Wishlist cleared successfully" };
   }
 }
-

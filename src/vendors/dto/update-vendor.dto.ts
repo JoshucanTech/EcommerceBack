@@ -1,31 +1,53 @@
-import { ApiPropertyOptional } from "@nestjs/swagger"
-import { IsString, IsEmail, IsOptional, IsNumber, Min, Max } from "class-validator"
+import { ApiPropertyOptional } from "@nestjs/swagger";
+import {
+  IsString,
+  IsEmail,
+  IsOptional,
+  IsNumber,
+  Min,
+  Max,
+} from "class-validator";
 
 export class UpdateVendorDto {
-  @ApiPropertyOptional({ description: "Business name", example: "Tech Gadgets Pro" })
+  @ApiPropertyOptional({
+    description: "Business name",
+    example: "Tech Gadgets Pro",
+  })
   @IsOptional()
   @IsString()
-  businessName?: string
+  businessName?: string;
 
-  @ApiPropertyOptional({ description: "Business email", example: "contact@techgadgetspro.com" })
+  @ApiPropertyOptional({
+    description: "Business email",
+    example: "contact@techgadgetspro.com",
+  })
   @IsOptional()
   @IsEmail()
-  businessEmail?: string
+  businessEmail?: string;
 
-  @ApiPropertyOptional({ description: "Business phone", example: "+1987654321" })
+  @ApiPropertyOptional({
+    description: "Business phone",
+    example: "+1987654321",
+  })
   @IsOptional()
   @IsString()
-  businessPhone?: string
+  businessPhone?: string;
 
-  @ApiPropertyOptional({ description: "Business address", example: "456 Business Ave, New York, NY 10002" })
+  @ApiPropertyOptional({
+    description: "Business address",
+    example: "456 Business Ave, New York, NY 10002",
+  })
   @IsOptional()
   @IsString()
-  businessAddress?: string
+  businessAddress?: string;
 
-  @ApiPropertyOptional({ description: "Business logo URL", example: "https://example.com/new-logo.jpg" })
+  @ApiPropertyOptional({
+    description: "Business logo URL",
+    example: "https://example.com/new-logo.jpg",
+  })
   @IsOptional()
   @IsString()
-  businessLogo?: string
+  businessLogo?: string;
 
   @ApiPropertyOptional({
     description: "Business description",
@@ -33,13 +55,15 @@ export class UpdateVendorDto {
   })
   @IsOptional()
   @IsString()
-  description?: string
+  description?: string;
 
-  @ApiPropertyOptional({ description: "Commission rate percentage", example: 12.5 })
+  @ApiPropertyOptional({
+    description: "Commission rate percentage",
+    example: 12.5,
+  })
   @IsOptional()
   @IsNumber()
   @Min(0)
   @Max(100)
-  commissionRate?: number
+  commissionRate?: number;
 }
-

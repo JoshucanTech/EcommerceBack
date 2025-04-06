@@ -1,27 +1,36 @@
-import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger"
-import { IsString, IsEmail, IsArray, IsOptional } from "class-validator"
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { IsString, IsEmail, IsArray, IsOptional } from "class-validator";
 
 export class CreateVendorApplicationDto {
   @ApiProperty({ description: "Business name", example: "Tech Gadgets" })
   @IsString()
-  businessName: string
+  businessName: string;
 
-  @ApiProperty({ description: "Business email", example: "contact@techgadgets.com" })
+  @ApiProperty({
+    description: "Business email",
+    example: "contact@techgadgets.com",
+  })
   @IsEmail()
-  businessEmail: string
+  businessEmail: string;
 
   @ApiProperty({ description: "Business phone", example: "+1234567890" })
   @IsString()
-  businessPhone: string
+  businessPhone: string;
 
-  @ApiProperty({ description: "Business address", example: "123 Business St, New York, NY 10001" })
+  @ApiProperty({
+    description: "Business address",
+    example: "123 Business St, New York, NY 10001",
+  })
   @IsString()
-  businessAddress: string
+  businessAddress: string;
 
-  @ApiPropertyOptional({ description: "Business logo URL", example: "https://example.com/logo.jpg" })
+  @ApiPropertyOptional({
+    description: "Business logo URL",
+    example: "https://example.com/logo.jpg",
+  })
   @IsOptional()
   @IsString()
-  businessLogo?: string
+  businessLogo?: string;
 
   @ApiPropertyOptional({
     description: "Business description",
@@ -29,7 +38,7 @@ export class CreateVendorApplicationDto {
   })
   @IsOptional()
   @IsString()
-  description?: string
+  description?: string;
 
   @ApiProperty({
     description: "Document URLs",
@@ -38,6 +47,5 @@ export class CreateVendorApplicationDto {
   })
   @IsArray()
   @IsString({ each: true })
-  documents: string[]
+  documents: string[];
 }
-
