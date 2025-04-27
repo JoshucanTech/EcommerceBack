@@ -1,42 +1,57 @@
-import { IsArray, IsString, IsOptional, IsUUID, ValidateNested, IsNumber, Min } from "class-validator"
-import { Type } from "class-transformer"
-import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger"
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import {
+  IsString,
+  IsArray,
+  IsUUID,
+  IsOptional,
+  ValidateNested,
+  IsInt,
+  Min,
+} from "class-validator";
+import { Type } from "class-transformer";
 
 class OrderItemDto {
-  @ApiProperty({ example: "123e4567-e89b-12d3-a456-426614174000" })
+  @ApiProperty({
+    description: "Product ID",
+    example: "123e4567-e89b-12d3-a456-426614174000",
+  })
   @IsUUID()
-  productId: string
+  productId: string;
 
-  @ApiProperty({ example: 2 })
-  @IsNumber()
+  @ApiProperty({ description: "Quantity", example: 2 })
+  @IsInt()
   @Min(1)
-  quantity: number
+  quantity: number;
 }
 
 export class CreateOrderDto {
-  @ApiProperty({ type: [OrderItemDto] })
+  @ApiProperty({ description: "Order items", type: [OrderItemDto] })
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => OrderItemDto)
-  items: OrderItemDto[]
+  items: OrderItemDto[];
 
-  @ApiProperty({ example: "123e4567-e89b-12d3-a456-426614174000" })
-  @IsUUID()
-  addressId: string
-
-  @ApiPropertyOptional({ example: "123e4567-e89b-12d3-a456-426614174000" })
-  @IsUUID()
-  @IsOptional()
-  paymentMethodId?: string
-
-  @ApiPropertyOptional({ example: "123e4567-e89b-12d3-a456-426614174000" })
-  @IsUUID()
-  @IsOptional()
-  couponId?: string
-
-  @ApiPropertyOptional({ example: "Please deliver to the back door" })
+  @ApiProperty({ description: "Payment method", example: "CREDIT_CARD" })
   @IsString()
-  @IsOptional()
-  notes?: string
-}
+  paymentMethod: string;
 
+  @ApiProperty({
+    description: "Address ID",
+    example: "123e4567-e89b-12d3-a456-426614174000",
+  })
+  @IsUUID()
+  addressId: string;
+
+  @ApiPropertyOptional({ description: "Coupon code", example: "SUMMER20" })
+  @IsOptional()
+  @IsString()
+  couponCode?: string;
+
+  @ApiPropertyOptional({
+    description: "Order notes",
+    example: "Please leave at the front door",
+  })
+  @IsOptional()
+  @IsString()
+  notes?: string;
+}

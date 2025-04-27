@@ -1,3 +1,4 @@
+// backend/src/payments/payments.controller.ts
 import {
   Controller,
   Get,
@@ -7,107 +8,111 @@ import {
   Param,
   Delete,
   UseGuards,
-  Req,
-  HttpCode,
+  Query,
   HttpStatus,
-  Headers,
-} from "@nestjs/common"
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from "@nestjs/swagger"
-import { Stripe } from "stripe"
-
-import type { PaymentsService } from "./payments.service"
-import type { CreatePaymentDto } from "./dto/create-payment.dto"
-import type { UpdatePaymentDto } from "./dto/update-payment.dto"
-import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard"
+} from "@nestjs/common";
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiParam,
+  ApiQuery,
+  ApiBearerAuth,
+} from "@nestjs/swagger";
+import type { PaymentsService } from "./payments.service";
+import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
+import { RolesGuard } from "../auth/guards/roles.guard";
+import { Roles } from "../auth/decorators/roles.decorator";
+import { UserRole } from "@prisma/client";
+import { CurrentUser } from "../auth/decorators/current-user.decorator";
+import { CreatePaymentIntentDto } from "./dto/create-payment-intent.dto";
+import {
+  CreateOrderPaymentDto,
+  CreateRiderPaymentDto,
+  CreateFeaturePaymentDto,
+  CreatePaymentDto,
+} from "./dto/create-payment.dto";
+import { UpdatePaymentDto } from "./dto/update-payment.dto";
 
 @ApiTags("payments")
 @Controller("payments")
+@UseGuards(JwtAuthGuard, RolesGuard)
+@ApiBearerAuth()
 export class PaymentsController {
   constructor(private readonly paymentsService: PaymentsService) {}
 
-  @Post("methods")
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: "Create a new payment method" })
-  @ApiResponse({ status: 201, description: "Payment method created successfully" })
+  @Post()
+  @Roles(UserRole.ADMIN, UserRole.BUYER)
+  @ApiOperation({ summary: "Create a new payment" })
+  @ApiResponse({ status: 201, description: "Payment created successfully" })
   @ApiResponse({ status: 400, description: "Bad request" })
   @ApiResponse({ status: 401, description: "Unauthorized" })
-  async createPaymentMethod(@Body() createPaymentDto: CreatePaymentDto, @Req() req) {
-    return this.paymentsService.createPaymentMethod(req.user.id, createPaymentDto)
+  async create(
+    @Body() createPaymentDto: CreatePaymentDto,
+    @CurrentUser() user,
+  ) {
+    return this.paymentsService.create(createPaymentDto, user.id);
   }
 
-  @Get('methods')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get all payment methods for a user' })
-  @ApiResponse({ status: 200, description: 'List of payment methods' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async findAllPaymentMethods(@Req() req) {
-    return this.paymentsService.findAllPaymentMethods(req.user.id);
+  @Get()
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: "Get all payments" })
+  @ApiResponse({ status: 200, description: "Return all payments" })
+  @ApiQuery({ name: "page", required: false, type: Number })
+  @ApiQuery({ name: "limit", required: false, type: Number })
+  findAll(@Query("page") page = 1, @Query("limit") limit = 10) {
+    return this.paymentsService.findAll(+page, +limit);
   }
 
-  @Get('methods/:id')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get payment method by ID' })
-  @ApiResponse({ status: 200, description: 'Payment method details' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 404, description: 'Payment method not found' })
-  async findPaymentMethodById(@Param('id') id: string) {
-    return this.paymentsService.findPaymentMethodById(id);
+  @Get("user")
+  @Roles(UserRole.BUYER)
+  @ApiOperation({ summary: "Get current user payments" })
+  @ApiResponse({ status: 200, description: "Return user payments" })
+  @ApiQuery({ name: "page", required: false, type: Number })
+  @ApiQuery({ name: "limit", required: false, type: Number })
+  findUserPayments(
+    @CurrentUser() user,
+    @Query("page") page = 1,
+    @Query("limit") limit = 10,
+  ) {
+    return this.paymentsService.findUserPayments(user.id, +page, +limit);
   }
 
-  @Patch("methods/:id")
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: "Update payment method" })
-  @ApiResponse({ status: 200, description: "Payment method updated successfully" })
-  @ApiResponse({ status: 401, description: "Unauthorized" })
-  @ApiResponse({ status: 404, description: "Payment method not found" })
-  async updatePaymentMethod(@Param('id') id: string, @Body() updatePaymentDto: UpdatePaymentDto, @Req() req) {
-    return this.paymentsService.updatePaymentMethod(id, updatePaymentDto)
+  @Get(":id")
+  @Roles(UserRole.ADMIN, UserRole.BUYER)
+  @ApiOperation({ summary: "Get payment by ID" })
+  @ApiParam({ name: "id", description: "Payment ID" })
+  @ApiResponse({ status: 200, description: "Return the payment" })
+  @ApiResponse({ status: 404, description: "Payment not found" })
+  findOne(@Param("id") id: string, @CurrentUser() user) {
+    return this.paymentsService.findOne(id, user);
   }
 
-  @Delete('methods/:id')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Delete payment method' })
-  @ApiResponse({ status: 204, description: 'Payment method deleted successfully' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 404, description: 'Payment method not found' })
-  async removePaymentMethod(@Param('id') id: string) {
-    await this.paymentsService.removePaymentMethod(id);
+  @Patch(":id")
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: "Update payment" })
+  @ApiParam({ name: "id", description: "Payment ID" })
+  @ApiResponse({ status: 200, description: "Payment updated successfully" })
+  @ApiResponse({ status: 404, description: "Payment not found" })
+  update(@Param("id") id: string, @Body() updatePaymentDto: UpdatePaymentDto) {
+    return this.paymentsService.update(id, updatePaymentDto);
   }
 
-  @Post('intents/:orderId')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Create a payment intent' })
-  @ApiResponse({ status: 200, description: 'Payment intent created successfully' })
-  @ApiResponse({ status: 400, description: 'Bad request' })
-  @ApiResponse({ status: 404, description: 'Order not found' })
-  async createPaymentIntent(@Param('orderId') orderId: string) {
-    return this.paymentsService.createPaymentIntent(orderId);
+  @Delete(":id")
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: "Delete payment" })
+  @ApiResponse({ status: 200, description: "Payment deleted successfully" })
+  @ApiResponse({ status: 404, description: "Payment not found" })
+  @ApiParam({ name: "id", description: "Payment ID" })
+  remove(@Param("id") id: string) {
+    return this.paymentsService.remove(id);
   }
 
+  // Webhook endpoint for payment provider callbacks
   @Post("webhook")
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: "Stripe webhook endpoint" })
-  @ApiResponse({ status: 200, description: "Webhook received" })
-  async stripeWebhook(@Body() payload: any, @Headers('stripe-signature') signature: string): Promise<void> {
-    try {
-      const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-        apiVersion: "2023-10-16",
-      })
-
-      const event = stripe.webhooks.constructEvent(payload, signature, process.env.STRIPE_WEBHOOK_SECRET)
-
-      await this.paymentsService.handleStripeWebhook(event)
-    } catch (err) {
-      console.log(`Webhook signature verification failed.`, err.message)
-      throw new Error(`Webhook signature verification failed.`)
-    }
+  @ApiOperation({ summary: "Payment provider webhook" })
+  @ApiResponse({ status: 200, description: "Webhook processed" })
+  processWebhook(@Body() webhookData: any) {
+    return this.paymentsService.processWebhook(webhookData);
   }
 }
-

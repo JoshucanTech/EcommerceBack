@@ -1,70 +1,104 @@
-import { Controller, Post, Body, HttpCode, HttpStatus, Get, UseGuards, Req } from "@nestjs/common"
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from "@nestjs/swagger"
-
-import type { AuthService } from "./auth.service"
-import type { RegisterDto } from "./dto/register.dto"
-import type { LoginDto } from "./dto/login.dto"
-import type { ForgotPasswordDto } from "./dto/forgot-password.dto"
-import type { ResetPasswordDto } from "./dto/reset-password.dto"
-import type { VerifyEmailDto } from "./dto/verify-email.dto"
-import { JwtAuthGuard } from "./guards/jwt-auth.guard"
+// backend/src/auth/auth.controller.ts
+import {
+  Controller,
+  Post,
+  Body,
+  HttpCode,
+  HttpStatus,
+  UseGuards,
+  Get,
+  Req,
+} from "@nestjs/common";
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from "@nestjs/swagger";
+import type { AuthService } from "./auth.service";
+import type { RegisterDto } from "./dto/register.dto";
+import type { LoginDto } from "./dto/login.dto";
+import type { RefreshTokenDto } from "./dto/refresh-token.dto";
+import { JwtAuthGuard } from "./guards/jwt-auth.guard";
+import { LocalAuthGuard } from "./guards/local-auth.guard";
+import { GoogleAuthGuard } from "./guards/google-auth.guard";
+import { CurrentUser } from "./decorators/current-user.decorator";
+import { Public } from "./decorators/public.decorator";
 
 @ApiTags("auth")
 @Controller("auth")
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  @Post('register')
-  @ApiOperation({ summary: 'Register a new user' })
-  @ApiResponse({ status: 201, description: 'User registered successfully' })
-  @ApiResponse({ status: 400, description: 'Bad request' })
-  async register(@Body() registerDto: RegisterDto) {
+  @Post("register")
+  @ApiOperation({ summary: "Register a new user" })
+  @ApiResponse({ status: 201, description: "User registered successfully" })
+  @ApiResponse({ status: 400, description: "Bad request" })
+  @ApiResponse({ status: 409, description: "Email already exists" })
+  register(@Body() registerDto: RegisterDto) {
     return this.authService.register(registerDto);
   }
 
-  @Post('login')
+  @Post("login")
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Authenticate user and get token' })
-  @ApiResponse({ status: 200, description: 'User authenticated successfully' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async login(@Body() loginDto: LoginDto) {
-    return this.authService.login(loginDto);
+  @UseGuards(LocalAuthGuard)
+  @ApiOperation({ summary: "Login a user" })
+  @ApiResponse({ status: 200, description: "User logged in successfully" })
+  @ApiResponse({ status: 401, description: "Invalid credentials" })
+  login(@CurrentUser() user) {
+    return this.authService.login(user);
   }
 
-  @Post('verify-email')
+  @Post("refresh-token")
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Verify user email address' })
-  @ApiResponse({ status: 200, description: 'Email verified successfully' })
-  @ApiResponse({ status: 400, description: 'Bad request' })
-  async verifyEmail(@Body() verifyEmailDto: VerifyEmailDto) {
-    return this.authService.verifyEmail(verifyEmailDto);
+  @ApiOperation({ summary: "Refresh access token" })
+  @ApiResponse({ status: 200, description: "Token refreshed successfully" })
+  @ApiResponse({ status: 401, description: "Invalid refresh token" })
+  refreshToken(@Body() refreshTokenDto: RefreshTokenDto) {
+    return this.authService.refreshToken(refreshTokenDto.refreshToken);
   }
 
-  @Post('forgot-password')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Request password reset' })
-  @ApiResponse({ status: 200, description: 'Password reset email sent' })
-  async forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto) {
-    return this.authService.forgotPassword(forgotPasswordDto);
-  }
-
-  @Post('reset-password')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Reset password with token' })
-  @ApiResponse({ status: 200, description: 'Password reset successfully' })
-  @ApiResponse({ status: 400, description: 'Bad request' })
-  async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
-    return this.authService.resetPassword(resetPasswordDto);
-  }
-
-  @Get('me')
+  @Get("me")
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get current user profile' })
-  @ApiResponse({ status: 200, description: 'Current user profile' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async getProfile(@Req() req) {
-    return req.user;
+  @ApiOperation({ summary: "Get current user profile" })
+  @ApiResponse({ status: 200, description: "Returns the current user profile" })
+  @ApiResponse({ status: 401, description: "Unauthorized" })
+  getProfile(@CurrentUser() user) {
+    return this.authService.getProfile(user.id);
+  }
+
+  @Post("logout")
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: "Logout a user" })
+  @ApiResponse({ status: 200, description: "User logged out successfully" })
+  @ApiResponse({ status: 401, description: "Unauthorized" })
+  logout(@CurrentUser() user, @Body() body: { refreshToken: string }) {
+    return this.authService.logout(user.id, body.refreshToken);
+  }
+
+  @Get("google")
+  @UseGuards(GoogleAuthGuard)
+  @ApiOperation({ summary: "Login with Google" })
+  @ApiResponse({
+    status: 302,
+    description: "Redirects to Google for authentication",
+  })
+  googleAuth() {
+    // initiates the Google OAuth2 login flow
+  }
+
+  @Get("google/callback")
+  @UseGuards(GoogleAuthGuard)
+  @ApiOperation({ summary: "Google OAuth2 callback" })
+  @ApiResponse({
+    status: 200,
+    description: "Returns the user's access and refresh tokens",
+  })
+  @ApiResponse({ status: 401, description: "Unauthorized" })
+  googleAuthRedirect(@Req() req) {
+    return this.authService.login(req.user);
   }
 }
-

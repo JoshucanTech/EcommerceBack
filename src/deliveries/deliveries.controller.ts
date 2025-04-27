@@ -1,12 +1,29 @@
-import { Controller, Get, Post, Body, Patch, Param, UseGuards, Query, Req } from "@nestjs/common"
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from "@nestjs/swagger"
-
-import type { DeliveriesService } from "./deliveries.service"
-import type { CreateDeliveryDto } from "./dto/create-delivery.dto"
-import type { UpdateDeliveryDto } from "./dto/update-delivery.dto"
-import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard"
-import { Roles } from "../auth/decorators/roles.decorator"
-import { DeliveryStatus, Role } from "@prisma/client"
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  UseGuards,
+  Query,
+} from "@nestjs/common";
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiParam,
+  ApiQuery,
+  ApiBearerAuth,
+} from "@nestjs/swagger";
+import type { DeliveriesService } from "./deliveries.service";
+import type { CreateDeliveryDto } from "./dto/create-delivery.dto";
+import type { AssignRiderDto } from "./dto/assign-rider.dto";
+import type { UpdateDeliveryStatusDto } from "./dto/update-delivery-status.dto";
+import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
+import { RolesGuard } from "../auth/guards/roles.guard";
+import { Roles } from "../auth/decorators/roles.decorator";
+import { CurrentUser } from "../auth/decorators/current-user.decorator";
 
 @ApiTags("deliveries")
 @Controller("deliveries")
@@ -15,100 +32,241 @@ import { DeliveryStatus, Role } from "@prisma/client"
 export class DeliveriesController {
   constructor(private readonly deliveriesService: DeliveriesService) {}
 
-  @Post(":orderId")
-  @Roles(Role.ADMIN)
-  @ApiOperation({ summary: "Create a new delivery (Admin only)" })
+  @Post()
+  @UseGuards(RolesGuard)
+  @Roles("ADMIN", "VENDOR")
+  @ApiOperation({ summary: "Create a new delivery" })
   @ApiResponse({ status: 201, description: "Delivery created successfully" })
   @ApiResponse({ status: 400, description: "Bad request" })
   @ApiResponse({ status: 401, description: "Unauthorized" })
-  @ApiResponse({ status: 403, description: "Forbidden" })
-  async create(@Param('orderId') orderId: string, @Body() createDeliveryDto: CreateDeliveryDto) {
-    return this.deliveriesService.create(orderId, createDeliveryDto)
+  @ApiResponse({
+    status: 403,
+    description: "Forbidden - Insufficient permissions",
+  })
+  create(@Body() createDeliveryDto: CreateDeliveryDto, @CurrentUser() user) {
+    return this.deliveriesService.create(createDeliveryDto, user);
   }
 
   @Get()
-  @Roles(Role.ADMIN, Role.RIDER)
-  @ApiOperation({ summary: "Get all deliveries (Admin or Rider only)" })
-  @ApiQuery({ name: "riderId", required: false })
-  @ApiQuery({ name: "status", enum: DeliveryStatus, required: false })
-  @ApiQuery({ name: "skip", type: Number, required: false })
-  @ApiQuery({ name: "take", type: Number, required: false })
-  @ApiResponse({ status: 200, description: "List of deliveries" })
+  @UseGuards(RolesGuard)
+  @Roles("ADMIN")
+  @ApiOperation({ summary: "Get all deliveries (admin only)" })
+  @ApiQuery({
+    name: "page",
+    required: false,
+    type: Number,
+    description: "Page number",
+  })
+  @ApiQuery({
+    name: "limit",
+    required: false,
+    type: Number,
+    description: "Items per page",
+  })
+  @ApiQuery({
+    name: "status",
+    required: false,
+    type: String,
+    description: "Filter by status",
+  })
+  @ApiResponse({ status: 200, description: "Returns paginated deliveries" })
   @ApiResponse({ status: 401, description: "Unauthorized" })
-  @ApiResponse({ status: 403, description: "Forbidden" })
-  async findAll(
-    @Query('riderId') riderId?: string,
-    @Query('status') status?: DeliveryStatus,
-    @Query('skip') skip?: number,
-    @Query('take') take?: number,
-    @Req() req,
+  @ApiResponse({
+    status: 403,
+    description: "Forbidden - Insufficient permissions",
+  })
+  findAll(
+    @Query("page") page?: number,
+    @Query("limit") limit?: number,
+    @Query("status") status?: string,
   ) {
-    // If rider, only show assigned deliveries
-    if (req.user.role === Role.RIDER) {
-      riderId = req.user.id
-    }
-
-    return {
-      data: await this.deliveriesService.findAll({
-        riderId,
-        status,
-        skip: skip ? +skip : undefined,
-        take: take ? +take : undefined,
-      }),
-      meta: {
-        total: await this.deliveriesService.count({ riderId, status }),
-        skip: skip ? +skip : 0,
-        take: take ? +take : 10,
-      },
-    }
+    return this.deliveriesService.findAll({
+      page: page || 1,
+      limit: limit || 10,
+      status,
+    });
   }
 
-  @Get(':id')
-  @ApiOperation({ summary: 'Get delivery by ID' })
-  @ApiResponse({ status: 200, description: 'Delivery details' })
-  @ApiResponse({ status: 404, description: 'Delivery not found' })
-  async findOne(@Param('id') id: string) {
-    return this.deliveriesService.findOne(id);
-  }
-
-  @Patch(":id")
-  @Roles(Role.ADMIN)
-  @ApiOperation({ summary: "Update delivery (Admin only)" })
-  @ApiResponse({ status: 200, description: "Delivery updated successfully" })
+  @Get("rider")
+  @UseGuards(RolesGuard)
+  @Roles("RIDER")
+  @ApiOperation({ summary: "Get rider deliveries" })
+  @ApiQuery({
+    name: "page",
+    required: false,
+    type: Number,
+    description: "Page number",
+  })
+  @ApiQuery({
+    name: "limit",
+    required: false,
+    type: Number,
+    description: "Items per page",
+  })
+  @ApiQuery({
+    name: "status",
+    required: false,
+    type: String,
+    description: "Filter by status",
+  })
+  @ApiResponse({
+    status: 200,
+    description: "Returns paginated rider deliveries",
+  })
   @ApiResponse({ status: 401, description: "Unauthorized" })
-  @ApiResponse({ status: 403, description: "Forbidden" })
-  @ApiResponse({ status: 404, description: "Delivery not found" })
-  async update(@Param('id') id: string, @Body() updateDeliveryDto: UpdateDeliveryDto) {
-    return this.deliveriesService.update(id, updateDeliveryDto)
+  @ApiResponse({
+    status: 403,
+    description: "Forbidden - Insufficient permissions",
+  })
+  findRiderDeliveries(
+    @CurrentUser() user,
+    @Query("page") page?: number,
+    @Query("limit") limit?: number,
+    @Query("status") status?: string,
+  ) {
+    return this.deliveriesService.findRiderDeliveries(user.id, {
+      page: page || 1,
+      limit: limit || 10,
+      status,
+    });
   }
 
-  @Post(":id/assign/:riderId")
-  @Roles(Role.ADMIN)
-  @ApiOperation({ summary: "Assign a rider to a delivery (Admin only)" })
+  @Get("vendor")
+  @UseGuards(RolesGuard)
+  @Roles("VENDOR")
+  @ApiOperation({ summary: "Get vendor deliveries" })
+  @ApiQuery({
+    name: "page",
+    required: false,
+    type: Number,
+    description: "Page number",
+  })
+  @ApiQuery({
+    name: "limit",
+    required: false,
+    type: Number,
+    description: "Items per page",
+  })
+  @ApiQuery({
+    name: "status",
+    required: false,
+    type: String,
+    description: "Filter by status",
+  })
+  @ApiResponse({
+    status: 200,
+    description: "Returns paginated vendor deliveries",
+  })
+  @ApiResponse({ status: 401, description: "Unauthorized" })
+  @ApiResponse({
+    status: 403,
+    description: "Forbidden - Insufficient permissions",
+  })
+  findVendorDeliveries(
+    @CurrentUser() user,
+    @Query("page") page?: number,
+    @Query("limit") limit?: number,
+    @Query("status") status?: string,
+  ) {
+    return this.deliveriesService.findVendorDeliveries(user.id, {
+      page: page || 1,
+      limit: limit || 10,
+      status,
+    });
+  }
+
+  @Get("user")
+  @ApiOperation({ summary: "Get user deliveries" })
+  @ApiQuery({
+    name: "page",
+    required: false,
+    type: Number,
+    description: "Page number",
+  })
+  @ApiQuery({
+    name: "limit",
+    required: false,
+    type: Number,
+    description: "Items per page",
+  })
+  @ApiQuery({
+    name: "status",
+    required: false,
+    type: String,
+    description: "Filter by status",
+  })
+  @ApiResponse({
+    status: 200,
+    description: "Returns paginated user deliveries",
+  })
+  @ApiResponse({ status: 401, description: "Unauthorized" })
+  findUserDeliveries(
+    @CurrentUser() user,
+    @Query("page") page?: number,
+    @Query("limit") limit?: number,
+    @Query("status") status?: string,
+  ) {
+    return this.deliveriesService.findUserDeliveries(user.id, {
+      page: page || 1,
+      limit: limit || 10,
+      status,
+    });
+  }
+
+  @Get(":id")
+  @ApiOperation({ summary: "Get a delivery by ID" })
+  @ApiParam({ name: "id", description: "Delivery ID" })
+  @ApiResponse({ status: 200, description: "Returns the delivery" })
+  @ApiResponse({ status: 401, description: "Unauthorized" })
+  @ApiResponse({
+    status: 403,
+    description: "Forbidden - Not authorized to view this delivery",
+  })
+  @ApiResponse({ status: 404, description: "Delivery not found" })
+  findOne(@Param("id") id: string, @CurrentUser() user) {
+    return this.deliveriesService.findOne(id, user);
+  }
+
+  @Patch(":id/assign")
+  @UseGuards(RolesGuard)
+  @Roles("ADMIN")
+  @ApiOperation({ summary: "Assign a rider to a delivery (admin only)" })
+  @ApiParam({ name: "id", description: "Delivery ID" })
   @ApiResponse({ status: 200, description: "Rider assigned successfully" })
   @ApiResponse({ status: 400, description: "Bad request" })
   @ApiResponse({ status: 401, description: "Unauthorized" })
-  @ApiResponse({ status: 403, description: "Forbidden" })
-  @ApiResponse({ status: 404, description: "Delivery or rider not found" })
-  async assignRider(@Param('id') id: string, @Param('riderId') riderId: string) {
-    return this.deliveriesService.assignRider(id, riderId)
+  @ApiResponse({
+    status: 403,
+    description: "Forbidden - Insufficient permissions",
+  })
+  @ApiResponse({ status: 404, description: "Delivery not found" })
+  assignRider(@Param("id") id: string, @Body() assignRiderDto: AssignRiderDto) {
+    return this.deliveriesService.assignRider(id, assignRiderDto);
   }
 
   @Patch(":id/status")
-  @Roles(Role.ADMIN, Role.RIDER)
-  @ApiOperation({ summary: "Update delivery status (Admin or Rider only)" })
-  @ApiResponse({ status: 200, description: "Delivery status updated successfully" })
+  @ApiOperation({ summary: "Update delivery status" })
+  @ApiParam({ name: "id", description: "Delivery ID" })
+  @ApiResponse({
+    status: 200,
+    description: "Delivery status updated successfully",
+  })
+  @ApiResponse({ status: 400, description: "Bad request" })
   @ApiResponse({ status: 401, description: "Unauthorized" })
-  @ApiResponse({ status: 403, description: "Forbidden" })
+  @ApiResponse({
+    status: 403,
+    description: "Forbidden - Not authorized to update this delivery",
+  })
   @ApiResponse({ status: 404, description: "Delivery not found" })
-  async updateStatus(@Param('id') id: string, @Body('status') status: DeliveryStatus, @Req() req) {
-    // Check if user has permission to update this delivery
-    const delivery = await this.deliveriesService.findOne(id)
-    if (req.user.role !== Role.ADMIN && delivery.riderId !== req.user.id) {
-      throw new Error("You do not have permission to update this delivery")
-    }
-
-    return this.deliveriesService.updateStatus(id, status)
+  updateStatus(
+    @Param("id") id: string,
+    @Body() updateDeliveryStatusDto: UpdateDeliveryStatusDto,
+    @CurrentUser() user,
+  ) {
+    return this.deliveriesService.updateStatus(
+      id,
+      updateDeliveryStatusDto,
+      user,
+    );
   }
 }
-

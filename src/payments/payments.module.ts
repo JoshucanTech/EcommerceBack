@@ -1,2 +1,12 @@
-// No changes are needed as the existing code is assumed to be correct and the updates indicate undeclared variables, which suggests a problem in a different file or context that is not provided. The updates do not provide any code to add or modify.
+import { Module } from "@nestjs/common";
+import { PaymentsService } from "./payments.service";
+import { PaymentsController } from "./payments.controller";
+import { PrismaModule } from "../prisma/prisma.module";
 
+@Module({
+  imports: [PrismaModule],
+  controllers: [PaymentsController],
+  providers: [PaymentsService],
+  exports: [PaymentsService],
+})
+export class PaymentsModule {}

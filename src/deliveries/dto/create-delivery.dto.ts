@@ -1,56 +1,41 @@
-import {
-  IsNotEmpty,
-  IsString,
-  IsNumber,
-  IsOptional,
-  IsDateString,
-  IsArray,
-  ValidateNested,
-  ArrayMinSize,
-  ArrayMaxSize,
-} from "class-validator"
-import { Type } from "class-transformer"
-
-export class DeliveryItemDto {
-  @IsNotEmpty()
-  @IsString()
-  productId: string
-
-  @IsNotEmpty()
-  @IsNumber()
-  quantity: number
-}
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { IsString, IsUUID, IsOptional, IsDateString } from "class-validator";
 
 export class CreateDeliveryDto {
-  @IsNotEmpty()
-  @IsString()
-  customerId: string
+  @ApiProperty({
+    description: "Order ID",
+    example: "123e4567-e89b-12d3-a456-426614174000",
+  })
+  @IsUUID()
+  orderId: string;
 
-  @IsNotEmpty()
+  @ApiProperty({
+    description: "Pickup address",
+    example: "123 Vendor St, New York, NY 10001",
+  })
+  @IsString()
+  pickupAddress: string;
+
+  @ApiProperty({
+    description: "Delivery address",
+    example: "456 Customer Ave, New York, NY 10002",
+  })
+  @IsString()
+  deliveryAddress: string;
+
+  @ApiPropertyOptional({
+    description: "Estimated delivery time",
+    example: "2023-07-15T14:00:00Z",
+  })
+  @IsOptional()
   @IsDateString()
-  deliveryDate: string
+  estimatedDeliveryTime?: string;
 
+  @ApiPropertyOptional({
+    description: "Notes",
+    example: "Please handle with care",
+  })
   @IsOptional()
   @IsString()
-  deliveryAddress?: string
-
-  @IsOptional()
-  @IsString()
-  deliveryCity?: string
-
-  @IsOptional()
-  @IsString()
-  deliveryState?: string
-
-  @IsOptional()
-  @IsString()
-  deliveryZip?: string
-
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => DeliveryItemDto)
-  @ArrayMinSize(1)
-  @ArrayMaxSize(100)
-  items: DeliveryItemDto[]
+  notes?: string;
 }
-

@@ -1,159 +1,287 @@
-import { Injectable, NotFoundException } from "@nestjs/common"
-import type { PrismaService } from "../prisma/prisma.service"
-import type { CreateUserDto } from "./dto/create-user.dto"
-import type { UpdateUserDto } from "./dto/update-user.dto"
-import type { Role, User } from "@prisma/client"
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from "@nestjs/common";
+import type { PrismaService } from "../prisma/prisma.service";
+import type { UpdateUserDto } from "./dto/update-user.dto";
+import type { UpdateProfileDto } from "./dto/update-profile.dto";
+import type { CreateAddressDto } from "./dto/create-address.dto";
+import type { UpdateAddressDto } from "./dto/update-address.dto";
+import type { UpdateSettingsDto } from "./dto/update-settings.dto";
+import { Prisma } from "@prisma/client";
 
 @Injectable()
 export class UsersService {
   constructor(private prisma: PrismaService) {}
 
-  /**
-   * Create a new user
-   * @param createUserDto User creation data
-   * @returns The created user
-   */
-  async create(createUserDto: CreateUserDto): Promise<User> {
-    return this.prisma.user.create({
-      data: createUserDto,
-    })
+  async findAll(params: {
+    page: number;
+    limit: number;
+    search?: string;
+    role?: string;
+  }) {
+    const { page, limit, search, role } = params;
+    const skip = (page - 1) * limit;
+
+    // Build where conditions
+    const where: any = {};
+
+    if (search) {
+      where.OR = [
+        { email: { contains: search, mode: "insensitive" } },
+        { firstName: { contains: search, mode: "insensitive" } },
+        { lastName: { contains: search, mode: "insensitive" } },
+        { phone: { contains: search, mode: "insensitive" } },
+      ];
+    }
+
+    if (role) {
+      where.role = role;
+    }
+
+    // Get users with pagination
+    const [users, total] = await Promise.all([
+      this.prisma.user.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+          phone: true,
+          avatar: true,
+          role: true,
+          isActive: true,
+          emailVerified: true,
+          createdAt: true,
+          updatedAt: true,
+          vendor: {
+            select: {
+              id: true,
+              businessName: true,
+              isVerified: true,
+            },
+          },
+          rider: {
+            select: {
+              id: true,
+              isVerified: true,
+              isAvailable: true,
+            },
+          },
+        },
+      }),
+      this.prisma.user.count({ where }),
+    ]);
+
+    return {
+      data: users,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   }
 
-  /**
-   * Find all users with optional filtering
-   * @param options Query options
-   * @returns Array of users
-   */
-  async findAll(options?: {
-    role?: Role
-    isActive?: boolean
-    isVerified?: boolean
-    skip?: number
-    take?: number
-  }): Promise<User[]> {
-    const { role, isActive, isVerified, skip, take } = options || {}
-
-    return this.prisma.user.findMany({
-      where: {
-        ...(role !== undefined && { role }),
-        ...(isActive !== undefined && { isActive }),
-        ...(isVerified !== undefined && { isVerified }),
-      },
-      skip,
-      take,
-      orderBy: {
-        createdAt: "desc",
-      },
-    })
-  }
-
-  /**
-   * Find a user by ID
-   * @param id User ID
-   * @returns The found user or null
-   */
-  async findById(id: string): Promise<User | null> {
-    return this.prisma.user.findUnique({
+  async findOne(id: string) {
+    const user = await this.prisma.user.findUnique({
       where: { id },
-    })
+      include: {
+        profile: true,
+        addresses: true,
+        vendor: true,
+        rider: true,
+        settings: true,
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException(`User with ID ${id} not found`);
+    }
+
+    // Remove password from response
+    const { password, ...userWithoutPassword } = user;
+
+    return userWithoutPassword;
   }
 
-  /**
-   * Find a user by email
-   * @param email User email
-   * @returns The found user or null
-   */
-  async findByEmail(email: string): Promise<User | null> {
+  async findByEmail(email: string) {
     return this.prisma.user.findUnique({
       where: { email },
-    })
+    });
   }
 
-  /**
-   * Find a user by verification token
-   * @param token Verification token
-   * @returns The found user or null
-   */
-  async findByVerificationToken(token: string): Promise<User | null> {
-    return this.prisma.user.findFirst({
-      where: { verificationToken: token },
-    })
-  }
+  async update(id: string, updateUserDto: UpdateUserDto) {
+    // Check if user exists
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+    });
 
-  /**
-   * Find a user by reset token
-   * @param token Reset token
-   * @returns The found user or null
-   */
-  async findByResetToken(token: string): Promise<User | null> {
-    return this.prisma.user.findFirst({
-      where: { resetToken: token },
-    })
-  }
-
-  /**
-   * Update a user
-   * @param id User ID
-   * @param updateUserDto User update data
-   * @returns The updated user
-   */
-  async update(id: string, updateUserDto: UpdateUserDto): Promise<User> {
-    const user = await this.findById(id)
     if (!user) {
-      throw new NotFoundException(`User with ID ${id} not found`)
+      throw new NotFoundException(`User with ID ${id} not found`);
     }
 
-    return this.prisma.user.update({
+    // Check if email is being updated and is unique
+    if (updateUserDto.email && updateUserDto.email !== user.email) {
+      const existingUser = await this.prisma.user.findUnique({
+        where: { email: updateUserDto.email },
+      });
+
+      if (existingUser) {
+        throw new BadRequestException("Email already in use");
+      }
+    }
+
+    // Update user
+    const updatedUser = await this.prisma.user.update({
       where: { id },
       data: updateUserDto,
-    })
+    });
+
+    // Remove password from response
+    const { password, ...userWithoutPassword } = updatedUser;
+
+    return userWithoutPassword;
   }
 
-  /**
-   * Delete a user
-   * @param id User ID
-   * @returns The deleted user
-   */
-  async remove(id: string): Promise<User> {
-    const user = await this.findById(id)
-    if (!user) {
-      throw new NotFoundException(`User with ID ${id} not found`)
+  async updateProfile(userId: string, updateProfileDto: UpdateProfileDto) {
+    // Check if profile exists
+    const profile = await this.prisma.profile.findUnique({
+      where: { userId },
+    });
+
+    if (profile) {
+      // Update existing profile
+      return this.prisma.profile.update({
+        where: { userId },
+        data: updateProfileDto,
+      });
+    } else {
+      // Create new profile
+      return this.prisma.profile.create({
+        data: {
+          ...updateProfileDto,
+          userId,
+        },
+      });
+    }
+  }
+
+  async updateSettings(userId: string, updateSettingsDto: UpdateSettingsDto) {
+    // Check if settings exist
+    const settings = await this.prisma.userSettings.findUnique({
+      where: { userId },
+    });
+
+    if (settings) {
+      // Update existing settings
+      return this.prisma.userSettings.update({
+        where: { userId },
+        data: updateSettingsDto,
+      });
+    } else {
+      // Create new settings
+      return this.prisma.userSettings.create({
+        data: {
+          ...updateSettingsDto,
+          userId,
+        },
+      });
+    }
+  }
+
+  async getAddresses(userId: string) {
+    return this.prisma.address.findMany({
+      where: { userId },
+      orderBy: [{ isDefault: "desc" }, { createdAt: "desc" }],
+    });
+  }
+
+  async createAddress(
+    userId: string,
+    createAddressDto: Prisma.AddressCreateInput,
+  ) {
+    const { isDefault, ...addressData } = createAddressDto;
+
+    // If this is the default address, unset any existing default
+    if (isDefault) {
+      await this.prisma.address.updateMany({
+        where: { userId, isDefault: true },
+        data: { isDefault: false },
+      });
     }
 
-    return this.prisma.user.delete({
-      where: { id },
-    })
-  }
-
-  /**
-   * Count users with optional filtering
-   * @param options Query options
-   * @returns Number of users
-   */
-  async count(options?: {
-    role?: Role
-    isActive?: boolean
-    isVerified?: boolean
-  }): Promise<number> {
-    const { role, isActive, isVerified } = options || {}
-
-    return this.prisma.user.count({
-      where: {
-        ...(role !== undefined && { role }),
-        ...(isActive !== undefined && { isActive }),
-        ...(isVerified !== undefined && { isVerified }),
+    // Create address
+    return this.prisma.address.create({
+      data: {
+        ...addressData,
+        isDefault: isDefault || false,
+        user: { connect: { id: userId } },
       },
-    })
+    });
   }
 
-  /**
-   * Remove sensitive information from user object
-   * @param user User object
-   * @returns Sanitized user object
-   */
-  sanitizeUser(user: User): Partial<User> {
-    const { password, verificationToken, resetToken, resetTokenExpiry, ...sanitizedUser } = user
-    return sanitizedUser
+  async updateAddress(
+    userId: string,
+    id: string,
+    updateAddressDto: UpdateAddressDto,
+  ) {
+    // Check if address exists and belongs to user
+    const address = await this.prisma.address.findFirst({
+      where: {
+        id,
+        userId,
+      },
+    });
+
+    if (!address) {
+      throw new NotFoundException(`Address with ID ${id} not found`);
+    }
+
+    const { isDefault, ...addressData } = updateAddressDto;
+
+    // If this is being set as the default address, unset any existing default
+    if (isDefault && !address.isDefault) {
+      await this.prisma.address.updateMany({
+        where: { userId, isDefault: true },
+        data: { isDefault: false },
+      });
+    }
+
+    // Update address
+    return this.prisma.address.update({
+      where: { id },
+      data: {
+        ...addressData,
+        isDefault: isDefault !== undefined ? isDefault : address.isDefault,
+      },
+    });
+  }
+
+  async removeAddress(userId: string, id: string) {
+    // Check if address exists and belongs to user
+    const address = await this.prisma.address.findFirst({
+      where: {
+        id,
+        userId,
+      },
+    });
+
+    if (!address) {
+      throw new NotFoundException(`Address with ID ${id} not found`);
+    }
+
+    // Delete address
+    await this.prisma.address.delete({
+      where: { id },
+    });
+
+    return { message: "Address deleted successfully" };
   }
 }
-

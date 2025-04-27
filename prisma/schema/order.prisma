@@ -1,0 +1,79 @@
+// Order-related models
+model Order {
+  id            String        @id @default(uuid())
+  orderNumber   String        @unique
+  userId        String
+  user          User          @relation("UserOrders", fields: [userId], references: [id])
+  vendorId      String?
+  vendor        Vendor?       @relation("VendorOrders", fields: [vendorId], references: [id])
+  items         OrderItem[]
+  totalAmount   Float
+  status        OrderStatus   @default(PENDING)
+  paymentStatus PaymentStatus @default(PENDING)
+  paymentMethod String
+  addressId     String?
+  address       Address?      @relation(fields: [addressId], references: [id])
+  couponId      String?
+  coupon        Coupon?       @relation(fields: [couponId], references: [id])
+  delivery      Delivery?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  Payment Payment[]
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id         String   @id @default(uuid())
+  orderId    String
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id])
+  quantity   Int
+  unitPrice  Float
+  totalPrice Float
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("order_items")
+}
+
+model Delivery {
+  id                    String         @id @default(uuid())
+  orderId               String         @unique
+  order                 Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  riderId               String?
+  rider                 Rider?         @relation(fields: [riderId], references: [id])
+  status                DeliveryStatus @default(PENDING)
+  pickupAddress         String
+  deliveryAddress       String
+  estimatedDeliveryTime DateTime?
+  actualDeliveryTime    DateTime?
+  trackingNumber        String         @unique
+  notes                 String?
+  riderEarnings         RiderEarning[]
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+
+  @@map("deliveries")
+}
+
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  REFUNDED
+}
+
+enum DeliveryStatus {
+  PENDING
+  ASSIGNED
+  PICKED_UP
+  IN_TRANSIT
+  DELIVERED
+  FAILED
+  CANCELLED
+}

@@ -1,30 +1,95 @@
-// Since the existing code was omitted for brevity and the updates indicate undeclared variables,
-// I will assume the file contains validation logic using a library like 'class-validator' and 'class-transformer'.
-// I will add the necessary imports to resolve the undeclared variables.
+// backend/src/payments/dto/create-payment.dto.ts
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import {
+  IsEnum,
+  IsNotEmpty,
+  IsNumber,
+  IsString,
+  IsUUID,
+  IsOptional,
+  IsObject,
+} from "class-validator";
+import { PaymentMethod, PaymentStatus, PaymentType } from "@prisma/client";
 
-import { IsString, IsNumber, IsOptional, IsNotEmpty, Min } from "class-validator"
-import { Type } from "class-transformer"
-
+// Base DTO for creating a payment
 export class CreatePaymentDto {
+  @ApiProperty({
+    description: "Order ID or related entity ID",
+    example: "123e4567-e89b-12d3-a456-426614174000",
+  })
   @IsString()
   @IsNotEmpty()
-  readonly paymentMethod: string
+  entityId: string; // Could be orderId, riderId, etc.
 
+  @ApiProperty({
+    description: "Payment type",
+    example: "ORDER",
+    enum: ["ORDER", "RIDER_PAYMENT", "FEATURE_PAYMENT"],
+  })
+  @IsEnum(PaymentType)
+  @IsNotEmpty()
+  paymentType: PaymentType; // e.g., 'ORDER', 'RIDER_PAYMENT', 'FEATURE_PAYMENT'
+
+  @ApiProperty({
+    description: "Payment method",
+    example: `${PaymentMethod.CREDIT_CARD}`,
+    enum: PaymentMethod,
+  })
+  @IsEnum(PaymentMethod)
+  @IsNotEmpty()
+  method: PaymentMethod;
+
+  @ApiProperty({ description: "Amount to be paid", example: 199.99 })
   @IsNumber()
-  @Min(0.01)
-  readonly amount: number
+  @IsNotEmpty()
+  amount: number;
 
+  @ApiProperty({
+    description: "Transaction reference from payment provider",
+    required: false,
+  })
   @IsString()
   @IsOptional()
-  readonly currency?: string
+  transactionReference?: string;
 
-  @IsString()
-  @IsOptional()
-  readonly description?: string
+  @ApiProperty({
+    description: "Payment status",
+    enum: PaymentStatus,
+    example: PaymentStatus.PENDING,
+    default: PaymentStatus.PENDING,
+  })
+  @IsEnum(PaymentStatus)
+  status: PaymentStatus = PaymentStatus.PENDING;
 
-  @IsNumber()
-  @Type(() => Number)
+  @ApiPropertyOptional({ description: "Additional details", type: Object })
   @IsOptional()
-  readonly orderId?: number
+  @IsObject()
+  details?: any; // Use any or a specific type based on payment type
 }
 
+// DTO for order payments (extends CreatePaymentDto)
+export class CreateOrderPaymentDto extends CreatePaymentDto {
+  @ApiProperty({
+    description: "Order ID",
+    example: "123e4567-e89b-12d3-a456-426614174000",
+  })
+  @IsUUID()
+  orderId: string;
+}
+
+// DTO for rider payments (extends CreatePaymentDto)
+export class CreateRiderPaymentDto extends CreatePaymentDto {
+  @ApiProperty({
+    description: "Rider ID",
+    example: "123e4567-e89b-12d3-a456-426614174000",
+  })
+  @IsUUID()
+  riderId: string;
+}
+
+// DTO for feature payments (extends CreatePaymentDto)
+export class CreateFeaturePaymentDto extends CreatePaymentDto {
+  @ApiProperty({ description: "Feature ID", example: "feature-123" })
+  @IsString()
+  featureId: string;
+}

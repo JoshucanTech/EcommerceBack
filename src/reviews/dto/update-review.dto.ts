@@ -1,2 +1,19 @@
-// No changes are needed to the file based on the provided information. The updates indicate undeclared variables, but without the original code, it's impossible to determine the correct import or declaration. Assuming the existing code is correct as stated, no modifications are made.
+import { ApiPropertyOptional } from "@nestjs/swagger";
+import { IsInt, IsString, IsOptional, Min, Max } from "class-validator";
 
+export class UpdateReviewDto {
+  @ApiPropertyOptional({ description: "Rating (1-5)", example: 5 })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(5)
+  rating?: number;
+
+  @ApiPropertyOptional({
+    description: "Review comment",
+    example: "After using it for a while, I am even more impressed!",
+  })
+  @IsOptional()
+  @IsString()
+  comment?: string;
+}

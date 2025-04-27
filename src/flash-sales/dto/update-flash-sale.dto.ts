@@ -1,10 +1,4 @@
-// ... This file was left out
-// for brevity. Assume it is correct
-// and
-// does
-// not
-// need
-// any
-// modifications.
-// ...
+import { PartialType } from "@nestjs/swagger";
+import { CreateFlashSaleDto } from "./create-flash-sale.dto";
 
+export class UpdateFlashSaleDto extends PartialType(CreateFlashSaleDto) {}
