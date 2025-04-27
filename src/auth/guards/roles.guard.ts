@@ -1,21 +1,13 @@
 import { Injectable, type CanActivate, type ExecutionContext } from "@nestjs/common"
 import type { Reflector } from "@nestjs/core"
-import type { UserRole } from "../../users/entities/user.entity"
+import type { Role } from "@prisma/client"
 
 @Injectable()
 export class RolesGuard implements CanActivate {
   constructor(private reflector: Reflector) {}
 
-  /**
-   * Check if user has required roles
-   * @param context Execution context
-   * @returns Whether user has required roles
-   */
   canActivate(context: ExecutionContext): boolean {
-    const requiredRoles = this.reflector.getAllAndOverride<UserRole[]>("roles", [
-      context.getHandler(),
-      context.getClass(),
-    ])
+    const requiredRoles = this.reflector.getAllAndOverride<Role[]>("roles", [context.getHandler(), context.getClass()])
 
     if (!requiredRoles) {
       return true

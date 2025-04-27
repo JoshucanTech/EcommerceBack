@@ -1,103 +1,153 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query, ParseUUIDPipe } from "@nestjs/common"
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from "@nestjs/swagger"
-import { AuthGuard } from "@nestjs/passport"
-import { RolesGuard } from "../auth/guards/roles.guard"
-import { Roles } from "../auth/decorators/roles.decorator"
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseGuards,
+  Query,
+  HttpStatus,
+  HttpCode,
+  UseInterceptors,
+  UploadedFile,
+} from "@nestjs/common"
+import { FileInterceptor } from "@nestjs/platform-express"
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery, ApiConsumes, ApiBody } from "@nestjs/swagger"
+
 import type { CategoriesService } from "./categories.service"
 import type { CreateCategoryDto } from "./dto/create-category.dto"
 import type { UpdateCategoryDto } from "./dto/update-category.dto"
-import { UserRole } from "../users/entities/user.entity"
+import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard"
+import { RolesGuard } from "../auth/guards/roles.guard"
+import { Roles } from "../auth/decorators/roles.decorator"
+import { Role } from "@prisma/client"
+import type { Express } from "express"
 
-@ApiTags("Categories")
+@ApiTags("categories")
 @Controller("categories")
 export class CategoriesController {
   constructor(private readonly categoriesService: CategoriesService) {}
 
+  @Post()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Create a new category (Admin only)' })
   @ApiResponse({ status: 201, description: 'Category created successfully' })
-  @ApiResponse({ status: 400, description: 'Bad request' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden' })
-  @Post()
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles(UserRole.ADMIN)
-  @ApiBearerAuth()
-  create(@Body() createCategoryDto: CreateCategoryDto) {
+  async create(@Body() createCategoryDto: CreateCategoryDto) {
     return this.categoriesService.create(createCategoryDto);
   }
 
-  @ApiOperation({ summary: "Get all categories with filtering and pagination" })
-  @ApiResponse({ status: 200, description: "Categories retrieved successfully" })
-  @ApiQuery({ name: "page", required: false, type: Number })
-  @ApiQuery({ name: "limit", required: false, type: Number })
-  @ApiQuery({ name: "search", required: false, type: String })
-  @ApiQuery({ name: "featured", required: false, type: Boolean })
-  @ApiQuery({ name: "parentId", required: false, type: String })
-  @ApiQuery({ name: "sortBy", required: false, type: String })
-  @ApiQuery({ name: "sortOrder", required: false, enum: ["ASC", "DESC"] })
   @Get()
-  findAll(
-    @Query('page') page?: number,
-    @Query('limit') limit?: number,
-    @Query('search') search?: string,
-    @Query('featured') featured?: boolean,
+  @ApiOperation({ summary: "Get all categories" })
+  @ApiQuery({ name: "parentId", required: false })
+  @ApiQuery({ name: "isActive", type: Boolean, required: false })
+  @ApiQuery({ name: "search", required: false })
+  @ApiQuery({ name: "skip", type: Number, required: false })
+  @ApiQuery({ name: "take", type: Number, required: false })
+  @ApiResponse({ status: 200, description: "List of categories" })
+  async findAll(
     @Query('parentId') parentId?: string,
-    @Query('sortBy') sortBy?: string,
-    @Query('sortOrder') sortOrder?: 'ASC' | 'DESC',
+    @Query('isActive') isActive?: boolean,
+    @Query('search') search?: string,
+    @Query('skip') skip?: number,
+    @Query('take') take?: number,
   ) {
-    return this.categoriesService.findAll({
-      page,
-      limit,
-      search,
-      featured,
+    const categories = await this.categoriesService.findAll({
       parentId,
-      sortBy,
-      sortOrder,
+      isActive,
+      search,
+      skip: skip ? +skip : undefined,
+      take: take ? +take : undefined,
     })
+
+    const count = await this.categoriesService.count({
+      parentId,
+      isActive,
+      search,
+    })
+
+    return {
+      data: categories,
+      meta: {
+        total: count,
+        skip: skip ? +skip : 0,
+        take: take ? +take : categories.length,
+      },
+    }
   }
 
-  @ApiOperation({ summary: 'Get a category by ID' })
-  @ApiResponse({ status: 200, description: 'Category retrieved successfully' })
-  @ApiResponse({ status: 404, description: 'Category not found' })
   @Get(':id')
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
-    return this.categoriesService.findOne(id);
+  @ApiOperation({ summary: 'Get category by ID' })
+  @ApiResponse({ status: 200, description: 'Category details' })
+  @ApiResponse({ status: 404, description: 'Category not found' })
+  async findOne(@Param('id') id: string) {
+    return this.categoriesService.findById(id);
   }
 
-  @ApiOperation({ summary: 'Get a category by slug' })
-  @ApiResponse({ status: 200, description: 'Category retrieved successfully' })
-  @ApiResponse({ status: 404, description: 'Category not found' })
   @Get('slug/:slug')
-  findBySlug(@Param('slug') slug: string) {
+  @ApiOperation({ summary: 'Get category by slug' })
+  @ApiResponse({ status: 200, description: 'Category details' })
+  @ApiResponse({ status: 404, description: 'Category not found' })
+  async findBySlug(@Param('slug') slug: string) {
     return this.categoriesService.findBySlug(slug);
   }
 
-  @ApiOperation({ summary: "Update a category (Admin only)" })
+  @Patch(":id")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Update category (Admin only)" })
   @ApiResponse({ status: 200, description: "Category updated successfully" })
-  @ApiResponse({ status: 400, description: "Bad request" })
   @ApiResponse({ status: 401, description: "Unauthorized" })
   @ApiResponse({ status: 403, description: "Forbidden" })
   @ApiResponse({ status: 404, description: "Category not found" })
-  @Patch(":id")
-  @UseGuards(AuthGuard("jwt"), RolesGuard)
-  @Roles(UserRole.ADMIN)
-  @ApiBearerAuth()
-  update(@Param('id', ParseUUIDPipe) id: string, @Body() updateCategoryDto: UpdateCategoryDto) {
+  async update(@Param('id') id: string, @Body() updateCategoryDto: UpdateCategoryDto) {
     return this.categoriesService.update(id, updateCategoryDto)
   }
 
-  @ApiOperation({ summary: 'Delete a category (Admin only)' })
-  @ApiResponse({ status: 200, description: 'Category deleted successfully' })
-  @ApiResponse({ status: 400, description: 'Bad request' })
+  @Delete(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Delete category (Admin only)' })
+  @ApiResponse({ status: 204, description: 'Category deleted successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden' })
   @ApiResponse({ status: 404, description: 'Category not found' })
-  @Delete(':id')
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles(UserRole.ADMIN)
+  async remove(@Param('id') id: string) {
+    await this.categoriesService.remove(id);
+  }
+
+  @Post(":id/image")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
   @ApiBearerAuth()
-  remove(@Param('id', ParseUUIDPipe) id: string) {
-    return this.categoriesService.remove(id);
+  @UseInterceptors(FileInterceptor("image"))
+  @ApiConsumes("multipart/form-data")
+  @ApiBody({
+    schema: {
+      type: "object",
+      properties: {
+        image: {
+          type: "string",
+          format: "binary",
+        },
+      },
+    },
+  })
+  @ApiOperation({ summary: "Upload category image (Admin only)" })
+  @ApiResponse({ status: 200, description: "Image uploaded successfully" })
+  @ApiResponse({ status: 401, description: "Unauthorized" })
+  @ApiResponse({ status: 403, description: "Forbidden" })
+  @ApiResponse({ status: 404, description: "Category not found" })
+  async uploadImage(@Param('id') id: string, @UploadedFile() file: Express.Multer.File) {
+    return this.categoriesService.uploadImage(id, file)
   }
 }
 

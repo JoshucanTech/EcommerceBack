@@ -1,55 +1,34 @@
-import { ApiProperty } from "@nestjs/swagger"
-import { IsNotEmpty, IsString, IsOptional, IsBoolean, IsNumber, IsUUID } from "class-validator"
+import { IsString, IsOptional, IsBoolean, IsUUID } from "class-validator"
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger"
 
 export class CreateCategoryDto {
-  @ApiProperty({ description: "Category name" })
+  @ApiProperty({ example: "Category Name" })
   @IsString()
-  @IsNotEmpty()
   name: string
 
-  @ApiProperty({ description: "Category description", required: false })
-  @IsString()
-  @IsOptional()
-  description?: string
-
-  @ApiProperty({ description: "Category slug for SEO-friendly URLs", required: false })
+  @ApiPropertyOptional({ example: "category-name" })
   @IsString()
   @IsOptional()
   slug?: string
 
-  @ApiProperty({ description: "Category image URL", required: false })
+  @ApiPropertyOptional({ example: "Category description" })
+  @IsString()
+  @IsOptional()
+  description?: string
+
+  @ApiPropertyOptional({ example: "123e4567-e89b-12d3-a456-426614174000" })
+  @IsUUID()
+  @IsOptional()
+  parentId?: string
+
+  @ApiPropertyOptional({ example: "https://example.com/image.jpg" })
   @IsString()
   @IsOptional()
   image?: string
 
-  @ApiProperty({ description: "Category icon", required: false })
-  @IsString()
-  @IsOptional()
-  icon?: string
-
-  @ApiProperty({ description: "Whether the category is featured", default: false })
+  @ApiPropertyOptional({ default: true })
   @IsBoolean()
   @IsOptional()
-  featured?: boolean
-
-  @ApiProperty({ description: "Category display order", default: 0 })
-  @IsNumber()
-  @IsOptional()
-  displayOrder?: number
-
-  @ApiProperty({ description: "Category meta title for SEO", required: false })
-  @IsString()
-  @IsOptional()
-  metaTitle?: string
-
-  @ApiProperty({ description: "Category meta description for SEO", required: false })
-  @IsString()
-  @IsOptional()
-  metaDescription?: string
-
-  @ApiProperty({ description: "Parent category ID", required: false })
-  @IsUUID()
-  @IsOptional()
-  parentId?: string
+  isActive?: boolean
 }
 

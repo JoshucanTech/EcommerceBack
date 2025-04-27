@@ -1,95 +1,100 @@
-import { ApiProperty } from "@nestjs/swagger"
-import { IsNotEmpty, IsString, IsNumber, IsOptional, IsArray, IsBoolean, IsObject, Min, IsUUID } from "class-validator"
+import { IsString, IsNumber, IsOptional, IsBoolean, IsArray, Min, IsUUID, IsObject } from "class-validator"
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger"
 
 export class CreateProductDto {
-  @ApiProperty({ description: "Product name" })
+  @ApiProperty({ example: "Product Name" })
   @IsString()
-  @IsNotEmpty()
   name: string
 
-  @ApiProperty({ description: "Product description" })
-  @IsString()
-  @IsNotEmpty()
-  description: string
-
-  @ApiProperty({ description: "Product price" })
-  @IsNumber()
-  @Min(0)
-  @IsNotEmpty()
-  price: number
-
-  @ApiProperty({ description: "Product discount price", required: false })
-  @IsNumber()
-  @Min(0)
-  @IsOptional()
-  discountPrice?: number
-
-  @ApiProperty({ description: "Product main image URL" })
-  @IsString()
-  @IsNotEmpty()
-  mainImage: string
-
-  @ApiProperty({ description: "Product additional images URLs", required: false, type: [String] })
-  @IsArray()
-  @IsString({ each: true })
-  @IsOptional()
-  additionalImages?: string[]
-
-  @ApiProperty({ description: "Product SKU (Stock Keeping Unit)", required: false })
-  @IsString()
-  @IsOptional()
-  sku?: string
-
-  @ApiProperty({ description: "Product quantity in stock" })
-  @IsNumber()
-  @Min(0)
-  @IsNotEmpty()
-  quantity: number
-
-  @ApiProperty({ description: "Whether the product is featured", default: false })
-  @IsBoolean()
-  @IsOptional()
-  featured?: boolean
-
-  @ApiProperty({ description: "Whether the product is on sale", default: false })
-  @IsBoolean()
-  @IsOptional()
-  onSale?: boolean
-
-  @ApiProperty({ description: "Product specifications", required: false })
-  @IsObject()
-  @IsOptional()
-  specifications?: Record<string, any>
-
-  @ApiProperty({ description: "Product weight in kg", required: false })
-  @IsNumber()
-  @IsOptional()
-  weight?: number
-
-  @ApiProperty({ description: "Product dimensions (L x W x H) in cm", required: false })
-  @IsObject()
-  @IsOptional()
-  dimensions?: { length: number; width: number; height: number }
-
-  @ApiProperty({ description: "Product slug for SEO-friendly URLs", required: false })
+  @ApiPropertyOptional({ example: "product-name" })
   @IsString()
   @IsOptional()
   slug?: string
 
-  @ApiProperty({ description: "Product meta title for SEO", required: false })
+  @ApiPropertyOptional({ example: "Product description" })
   @IsString()
   @IsOptional()
-  metaTitle?: string
+  description?: string
 
-  @ApiProperty({ description: "Product meta description for SEO", required: false })
+  @ApiProperty({ example: 99.99 })
+  @IsNumber()
+  @Min(0)
+  price: number
+
+  @ApiPropertyOptional({ example: 129.99 })
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  compareAtPrice?: number
+
+  @ApiPropertyOptional({ example: 50 })
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  costPrice?: number
+
+  @ApiPropertyOptional({ example: "SKU123" })
   @IsString()
   @IsOptional()
-  metaDescription?: string
+  sku?: string
 
-  @ApiProperty({ description: "Category IDs", type: [String] })
+  @ApiPropertyOptional({ example: "123456789" })
+  @IsString()
+  @IsOptional()
+  barcode?: string
+
+  @ApiPropertyOptional({ example: 100 })
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  inventory?: number
+
+  @ApiPropertyOptional({ example: 1.5 })
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  weight?: number
+
+  @ApiPropertyOptional({ example: "10x5x2" })
+  @IsString()
+  @IsOptional()
+  dimensions?: string
+
+  @ApiPropertyOptional({ default: true })
+  @IsBoolean()
+  @IsOptional()
+  isActive?: boolean
+
+  @ApiPropertyOptional({ default: false })
+  @IsBoolean()
+  @IsOptional()
+  isFeatured?: boolean
+
+  @ApiPropertyOptional({ example: "123e4567-e89b-12d3-a456-426614174000" })
+  @IsUUID()
+  @IsOptional()
+  categoryId?: string
+
+  @ApiPropertyOptional({ example: "123e4567-e89b-12d3-a456-426614174000" })
+  @IsUUID()
+  @IsOptional()
+  vendorId?: string
+
+  @ApiPropertyOptional({ type: [String], example: ["https://example.com/image1.jpg"] })
   @IsArray()
-  @IsUUID(undefined, { each: true })
+  @IsString({ each: true })
   @IsOptional()
-  categoryIds?: string[]
+  images?: string[]
+
+  @ApiPropertyOptional({ type: [String], example: ["tag1", "tag2"] })
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  tags?: string[]
+
+  @ApiPropertyOptional({ example: { color: "red", size: "large" } })
+  @IsObject()
+  @IsOptional()
+  attributes?: Record<string, any>
 }
 

@@ -1,114 +1,194 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query, ParseUUIDPipe, Req } from "@nestjs/common"
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from "@nestjs/swagger"
-import { AuthGuard } from "@nestjs/passport"
-import { RolesGuard } from "../auth/guards/roles.guard"
-import { Roles } from "../auth/decorators/roles.decorator"
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseGuards,
+  Query,
+  HttpStatus,
+  HttpCode,
+  UseInterceptors,
+  UploadedFiles,
+  Req,
+} from "@nestjs/common"
+import { FilesInterceptor } from "@nestjs/platform-express"
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery, ApiConsumes, ApiBody } from "@nestjs/swagger"
+import type { Express } from "express"
+
 import type { ProductsService } from "./products.service"
 import type { CreateProductDto } from "./dto/create-product.dto"
 import type { UpdateProductDto } from "./dto/update-product.dto"
-import { UserRole } from "../users/entities/user.entity"
+import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard"
+import { RolesGuard } from "../auth/guards/roles.guard"
+import { Roles } from "../auth/decorators/roles.decorator"
+import { Role } from "@prisma/client"
 
-@ApiTags("Products")
+@ApiTags("products")
 @Controller("products")
 export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
 
-  @ApiOperation({ summary: "Create a new product (Vendor only)" })
+  @Post()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.VENDOR, Role.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Create a new product (Vendor or Admin only)" })
   @ApiResponse({ status: 201, description: "Product created successfully" })
-  @ApiResponse({ status: 400, description: "Bad request" })
   @ApiResponse({ status: 401, description: "Unauthorized" })
   @ApiResponse({ status: 403, description: "Forbidden" })
-  @Post()
-  @UseGuards(AuthGuard("jwt"), RolesGuard)
-  @Roles(UserRole.VENDOR)
-  @ApiBearerAuth()
-  create(@Body() createProductDto: CreateProductDto, @Req() req) {
-    return this.productsService.create(createProductDto, req.user)
+  async create(@Body() createProductDto: CreateProductDto, @Req() req) {
+    const vendorId = req.user.role === Role.ADMIN ? createProductDto.vendorId : req.user.vendor.id
+
+    return this.productsService.create(vendorId, createProductDto)
   }
 
-  @ApiOperation({ summary: "Get all products with filtering and pagination" })
-  @ApiResponse({ status: 200, description: "Products retrieved successfully" })
-  @ApiQuery({ name: "page", required: false, type: Number })
-  @ApiQuery({ name: "limit", required: false, type: Number })
-  @ApiQuery({ name: "search", required: false, type: String })
-  @ApiQuery({ name: "category", required: false, type: String })
-  @ApiQuery({ name: "vendor", required: false, type: String })
-  @ApiQuery({ name: "minPrice", required: false, type: Number })
-  @ApiQuery({ name: "maxPrice", required: false, type: Number })
-  @ApiQuery({ name: "featured", required: false, type: Boolean })
-  @ApiQuery({ name: "onSale", required: false, type: Boolean })
-  @ApiQuery({ name: "sortBy", required: false, type: String })
-  @ApiQuery({ name: "sortOrder", required: false, enum: ["ASC", "DESC"] })
   @Get()
-  findAll(
-    @Query('page') page?: number,
-    @Query('limit') limit?: number,
-    @Query('search') search?: string,
-    @Query('category') category?: string,
-    @Query('vendor') vendor?: string,
+  @ApiOperation({ summary: "Get all products" })
+  @ApiQuery({ name: "vendorId", required: false })
+  @ApiQuery({ name: "categoryId", required: false })
+  @ApiQuery({ name: "isActive", type: Boolean, required: false })
+  @ApiQuery({ name: "isFeatured", type: Boolean, required: false })
+  @ApiQuery({ name: "minPrice", type: Number, required: false })
+  @ApiQuery({ name: "maxPrice", type: Number, required: false })
+  @ApiQuery({ name: "search", required: false })
+  @ApiQuery({ name: "skip", type: Number, required: false })
+  @ApiQuery({ name: "take", type: Number, required: false })
+  @ApiQuery({ name: "orderBy", required: false })
+  @ApiQuery({ name: "orderDirection", enum: ["asc", "desc"], required: false })
+  @ApiResponse({ status: 200, description: "List of products" })
+  async findAll(
+    @Query('vendorId') vendorId?: string,
+    @Query('categoryId') categoryId?: string,
+    @Query('isActive') isActive?: boolean,
+    @Query('isFeatured') isFeatured?: boolean,
     @Query('minPrice') minPrice?: number,
     @Query('maxPrice') maxPrice?: number,
-    @Query('featured') featured?: boolean,
-    @Query('onSale') onSale?: boolean,
-    @Query('sortBy') sortBy?: string,
-    @Query('sortOrder') sortOrder?: 'ASC' | 'DESC',
+    @Query('search') search?: string,
+    @Query('skip') skip?: number,
+    @Query('take') take?: number,
+    @Query('orderBy') orderBy?: string,
+    @Query('orderDirection') orderDirection?: 'asc' | 'desc',
   ) {
-    return this.productsService.findAll({
-      page,
-      limit,
+    const products = await this.productsService.findAll({
+      vendorId,
+      categoryId,
+      isActive,
+      isFeatured,
+      minPrice: minPrice ? +minPrice : undefined,
+      maxPrice: maxPrice ? +maxPrice : undefined,
       search,
-      category,
-      vendor,
-      minPrice,
-      maxPrice,
-      featured,
-      onSale,
-      sortBy,
-      sortOrder,
+      skip: skip ? +skip : undefined,
+      take: take ? +take : undefined,
+      orderBy,
+      orderDirection,
     })
+
+    const count = await this.productsService.count({
+      vendorId,
+      categoryId,
+      isActive,
+      isFeatured,
+      minPrice: minPrice ? +minPrice : undefined,
+      maxPrice: maxPrice ? +maxPrice : undefined,
+      search,
+    })
+
+    return {
+      data: products,
+      meta: {
+        total: count,
+        skip: skip ? +skip : 0,
+        take: take ? +take : products.length,
+      },
+    }
   }
 
-  @ApiOperation({ summary: 'Get a product by ID' })
-  @ApiResponse({ status: 200, description: 'Product retrieved successfully' })
-  @ApiResponse({ status: 404, description: 'Product not found' })
   @Get(':id')
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
-    return this.productsService.findOne(id);
+  @ApiOperation({ summary: 'Get product by ID' })
+  @ApiResponse({ status: 200, description: 'Product details' })
+  @ApiResponse({ status: 404, description: 'Product not found' })
+  async findOne(@Param('id') id: string) {
+    return this.productsService.findById(id);
   }
 
-  @ApiOperation({ summary: 'Get a product by slug' })
-  @ApiResponse({ status: 200, description: 'Product retrieved successfully' })
-  @ApiResponse({ status: 404, description: 'Product not found' })
   @Get('slug/:slug')
-  findBySlug(@Param('slug') slug: string) {
+  @ApiOperation({ summary: 'Get product by slug' })
+  @ApiResponse({ status: 200, description: 'Product details' })
+  @ApiResponse({ status: 404, description: 'Product not found' })
+  async findBySlug(@Param('slug') slug: string) {
     return this.productsService.findBySlug(slug);
   }
 
-  @ApiOperation({ summary: "Update a product (Vendor only)" })
+  @Patch(":id")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.VENDOR, Role.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Update product (Vendor or Admin only)" })
   @ApiResponse({ status: 200, description: "Product updated successfully" })
-  @ApiResponse({ status: 400, description: "Bad request" })
   @ApiResponse({ status: 401, description: "Unauthorized" })
   @ApiResponse({ status: 403, description: "Forbidden" })
   @ApiResponse({ status: 404, description: "Product not found" })
-  @Patch(":id")
-  @UseGuards(AuthGuard("jwt"), RolesGuard)
-  @Roles(UserRole.VENDOR)
-  @ApiBearerAuth()
-  update(@Param('id', ParseUUIDPipe) id: string, @Body() updateProductDto: UpdateProductDto, @Req() req) {
-    return this.productsService.update(id, updateProductDto, req.user)
+  async update(@Param('id') id: string, @Body() updateProductDto: UpdateProductDto) {
+    return this.productsService.update(id, updateProductDto)
   }
 
-  @ApiOperation({ summary: "Delete a product (Vendor only)" })
-  @ApiResponse({ status: 200, description: "Product deleted successfully" })
+  @Delete(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.VENDOR, Role.ADMIN)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Delete product (Vendor or Admin only)' })
+  @ApiResponse({ status: 204, description: 'Product deleted successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  @ApiResponse({ status: 404, description: 'Product not found' })
+  async remove(@Param('id') id: string) {
+    await this.productsService.remove(id);
+  }
+
+  @Post(":id/images")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.VENDOR, Role.ADMIN)
+  @ApiBearerAuth()
+  @UseInterceptors(FilesInterceptor("images", 10))
+  @ApiConsumes("multipart/form-data")
+  @ApiBody({
+    schema: {
+      type: "object",
+      properties: {
+        images: {
+          type: "array",
+          items: {
+            type: "string",
+            format: "binary",
+          },
+        },
+      },
+    },
+  })
+  @ApiOperation({ summary: "Upload product images (Vendor or Admin only)" })
+  @ApiResponse({ status: 200, description: "Images uploaded successfully" })
   @ApiResponse({ status: 401, description: "Unauthorized" })
   @ApiResponse({ status: 403, description: "Forbidden" })
   @ApiResponse({ status: 404, description: "Product not found" })
-  @Delete(":id")
-  @UseGuards(AuthGuard("jwt"), RolesGuard)
-  @Roles(UserRole.VENDOR)
+  async uploadImages(@Param('id') id: string, @UploadedFiles() files: Express.Multer.File[]) {
+    return this.productsService.uploadImages(id, files)
+  }
+
+  @Delete(":id/images")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.VENDOR, Role.ADMIN)
   @ApiBearerAuth()
-  remove(@Param('id', ParseUUIDPipe) id: string, @Req() req) {
-    return this.productsService.remove(id, req.user)
+  @ApiOperation({ summary: "Remove product image (Vendor or Admin only)" })
+  @ApiResponse({ status: 200, description: "Image removed successfully" })
+  @ApiResponse({ status: 401, description: "Unauthorized" })
+  @ApiResponse({ status: 403, description: "Forbidden" })
+  @ApiResponse({ status: 404, description: "Product not found" })
+  async removeImage(@Param('id') id: string, @Body('imageUrl') imageUrl: string) {
+    return this.productsService.removeImage(id, imageUrl)
   }
 }
 

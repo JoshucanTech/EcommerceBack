@@ -1,22 +1,14 @@
 import { Module } from "@nestjs/common"
-import { TypeOrmModule } from "@nestjs/typeorm"
 import { OrdersService } from "./orders.service"
 import { OrdersController } from "./orders.controller"
-import { Order } from "./entities/order.entity"
-import { OrderItem } from "./entities/order-item.entity"
+import { PrismaModule } from "../prisma/prisma.module"
 import { ProductsModule } from "../products/products.module"
-import { AddressesModule } from "../addresses/addresses.module"
-import { PaymentMethodsModule } from "../payment-methods/payment-methods.module"
-import { CouponsModule } from "../coupons/coupons.module"
+import { PaymentsModule } from "../payments/payments.module"
+import { NotificationsModule } from "../notifications/notifications.module"
+import { CommonModule } from "../common/common.module"
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([Order, OrderItem]),
-    ProductsModule,
-    AddressesModule,
-    PaymentMethodsModule,
-    CouponsModule,
-  ],
+  imports: [PrismaModule, ProductsModule, PaymentsModule, NotificationsModule, CommonModule],
   controllers: [OrdersController],
   providers: [OrdersService],
   exports: [OrdersService],

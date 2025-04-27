@@ -1,40 +1,26 @@
-import { ApiProperty } from "@nestjs/swagger"
-import { IsEnum, IsOptional, IsString, IsUUID } from "class-validator"
-import { OrderStatus, PaymentStatus } from "../entities/order.entity"
+import { IsEnum, IsOptional, IsString } from "class-validator"
+import { ApiPropertyOptional } from "@nestjs/swagger"
+import { OrderStatus, PaymentStatus } from "@prisma/client"
 
 export class UpdateOrderDto {
-  @ApiProperty({ description: "Order status", enum: OrderStatus, required: false })
+  @ApiPropertyOptional({ enum: OrderStatus })
   @IsEnum(OrderStatus)
   @IsOptional()
   status?: OrderStatus
 
-  @ApiProperty({ description: "Payment status", enum: PaymentStatus, required: false })
+  @ApiPropertyOptional({ enum: PaymentStatus })
   @IsEnum(PaymentStatus)
   @IsOptional()
   paymentStatus?: PaymentStatus
 
-  @ApiProperty({ description: "Payment reference", required: false })
-  @IsString()
-  @IsOptional()
-  paymentReference?: string
-
-  @ApiProperty({ description: "Expected delivery date", required: false })
-  @IsOptional()
-  expectedDeliveryDate?: Date
-
-  @ApiProperty({ description: "Order notes", required: false })
+  @ApiPropertyOptional({ example: "Payment received via bank transfer" })
   @IsString()
   @IsOptional()
   notes?: string
 
-  @ApiProperty({ description: "Shipping address ID", required: false })
-  @IsUUID()
+  @ApiPropertyOptional({ example: "pi_123456789" })
+  @IsString()
   @IsOptional()
-  shippingAddressId?: string
-
-  @ApiProperty({ description: "Billing address ID", required: false })
-  @IsUUID()
-  @IsOptional()
-  billingAddressId?: string
+  paymentIntentId?: string
 }
 
